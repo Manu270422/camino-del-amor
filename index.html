@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CaminoDelAmor · El Mundo de Manu</title>
+    <meta property="og:title" content="Alguien tiene algo importante que decirte 💌">
+    <meta property="og:description" content="Abre esto. Por favor.">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+    <div id="prog"><div id="progFill"></div></div>
+    
+    <button class="musi" id="musicBtn" onclick="toggleMusic()" style="display:none">🎵</button>
+    <button class="fab" id="fab" onclick="openEditor()" style="display:none">✏️</button>
+
+    <div id="s0" class="screen">
+        <div class="loader-content">
+            <img src="El Mundo de Manu.png" class="brand-logo-img" alt="Logo El Mundo de Manu">
+            
+            <h1 class="brand-name">CAMINO DEL AMOR</h1>
+            <p class="brand-tagline">by El Mundo de Manu</p>
+            
+            <div class="load-track" style="width: 200px; margin: 0 auto;">
+                <div id="loadFill" class="load-fill"></div>
+            </div>
+            <p style="font-size: 0.7em; color: #666; margin-top: 15px; letter-spacing: 1px;">CARGANDO EXPERIENCIA...</p>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="s1">
+        <div class="intro-card">
+            <p class="from-tag" id="iFrom">...</p>
+            <h1 class="intro-title" id="iTitle">Cargando mensaje...</h1>
+            <p class="intro-sub">Esta historia fue escrita con el corazón. Tómate un momento, respira y abre este regalo.</p>
+            <button class="btn-open" onclick="startStory()">Abrir carta ✦</button>
+        </div>
+    </div>
+
+    <div class="screen hidden" id="s2">
+        <div class="ch-wrap" id="chWrap"></div>
+    </div>
+
+    <div class="screen hidden" id="s3">
+        <div class="final-card">
+            <span class="final-heart">💝</span>
+            <p class="final-to" id="fTo">...</p>
+            <h2 class="final-title" id="fTitle">...</h2>
+            <p class="final-msg" id="fMsg">...</p>
+            <p class="final-msg" id="fDate"></p>
+            <button class="share-btn" onclick="publishLetter()">Compartir esta historia 💌</button>
+            <button class="own-btn" onclick="openEditor()">Personalizar la mía ✦</button>
+        </div>
+    </div>
+
+    <div id="editor" class="screen hidden" style="background: rgba(0,0,0,0.9); overflow-y: auto; position: fixed; top:0; left:0; width:100%; height:100%; z-index: 500;">
+        <button onclick="openHelp()" style="position: absolute; top: 15px; right: 15px; background: #444; border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; z-index: 600; font-weight: bold;">❓</button>
+
+        <div class="ed-sheet">
+            <div class="ed-title">✦ Personalizar Experiencia</div>
+            <div class="f-group">
+                <div class="f-label">Tu nombre (Emisor)</div>
+                <input class="f-input" id="edFrom" placeholder="Ej: Manu">
+            </div>
+            <div class="f-group">
+                <div class="f-label">Su nombre (Receptor)</div>
+                <input class="f-input" id="edTo" placeholder="Ej: María">
+            </div>
+            <div class="f-group">
+                <div class="f-label" id="musicLabel">Música (.mp3)</div>
+                <input type="file" id="edMusicFile" accept="audio/*" onchange="handleMusicUpload(event)" style="margin-bottom:10px; color: white;">
+                <input class="f-input" id="edMusicUrl" placeholder="Link directo .mp3" onchange="C.music = this.value">
+            </div>
+            <div id="chaptersEditor"></div>
+            <div class="f-group">
+                <div class="f-label">Mensaje de Cierre</div>
+                <textarea class="f-input" id="edMsg" placeholder="Escribe tus palabras finales..."></textarea>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                <button class="apply-btn" onclick="applyEdit()" style="background: #ff4d6d; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">Vista Previa ✦</button>
+                <button class="close-btn" onclick="showScreen('s1')" style="background: #444; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">Cancelar</button>
+            </div>
+            <button onclick="publishLetter()" style="width: 100%; margin-top: 15px; background: #25d366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">🚀 PUBLICAR Y CREAR LINK</button>
+        </div>
+
+        <div id="helpModal" class="hidden" style="background: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; position: fixed; top:0; left:0; width:100%; height:100%;">
+            <div style="background: #1a1a1a; padding: 30px; border-radius: 20px; max-width: 90%; width: 350px; border: 1px solid #ff4d6d; text-align: center; color: white;">
+                <h2 style="color: #ff4d6d; margin-bottom: 20px;">✨ Guía Rápida</h2>
+                <div style="text-align: left; font-size: 0.95em; line-height: 1.6;">
+                    <p><strong>1. Personaliza:</strong> Nombres y mensaje final.</p>
+                    <p><strong>2. Fotos:</strong> Sube una imagen por capítulo.</p>
+                    <p><strong>3. Música:</strong> Sube tu archivo favorito.</p>
+                    <p><strong>4. Publica:</strong> Comparte tu link único.</p>
+                </div>
+                <button onclick="closeHelp()" style="margin-top: 25px; background: #ff4d6d; color: white; border: none; padding: 12px 40px; border-radius: 50px; cursor: pointer; font-weight: bold;">¡Entendido! 💖</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="watermark">
+        Desarrollado por <strong>El Mundo de Manu</strong>
+    </div>
+
+    <audio id="bgAudio" loop><source src="" type="audio/mpeg"></audio>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
+            authDomain: "caminodelamor-270422.firebaseapp.com",
+            projectId: "caminodelamor-270422",
+            storageBucket: "caminodelamor-270422.firebasestorage.app",
+            messagingSenderId: "382407116447",
+            appId: "1:382407116447:web:0b8eb1f283fde40f1644aa",
+            measurementId: "G-HHBE3ZXNE3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+        window.dbMethods = { doc, setDoc, getDoc, collection };
+    </script>
+
+    <script src="script.js"></script>
+</body>
+</html>
