@@ -7,6 +7,7 @@
     <meta property="og:title" content="Alguien tiene algo importante que decirte 💌">
     <meta property="og:description" content="Abre esto. Por favor.">
     
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -51,7 +52,7 @@
             <h2 class="final-title" id="fTitle">...</h2>
             <p class="final-msg" id="fMsg">...</p>
             <p class="final-msg" id="fDate"></p>
-            <button class="share-btn" onclick="publishLetter()">Compartir esta historia 💌</button>
+            <button class="share-btn" id="mainPublishBtn" onclick="iniciarProcesoPago()">Compartir esta historia 💌</button>
             <button class="own-btn" onclick="openEditor()">Personalizar la mía ✦</button>
         </div>
     </div>
@@ -61,6 +62,9 @@
 
         <div class="ed-sheet">
             <div class="ed-title">✦ Personalizar Experiencia</div>
+            
+            <div id="status-msg" style="text-align: center; margin-bottom: 10px; font-weight: bold; font-size: 0.9em;"></div>
+
             <div class="f-group">
                 <div class="f-label">Tu nombre (Emisor)</div>
                 <input class="f-input" id="edFrom" placeholder="Ej: Manu">
@@ -83,7 +87,8 @@
                 <button class="apply-btn" onclick="applyEdit()" style="background: #ff4d6d; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">Vista Previa ✦</button>
                 <button class="close-btn" onclick="showScreen('s1')" style="background: #444; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">Cancelar</button>
             </div>
-            <button onclick="publishLetter()" style="width: 100%; margin-top: 15px; background: #25d366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">🚀 PUBLICAR Y CREAR LINK</button>
+            
+            <button onclick="iniciarProcesoPago()" style="width: 100%; margin-top: 15px; background: #25d366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">🚀 PUBLICAR Y CREAR LINK</button>
         </div>
 
         <div id="helpModal" class="hidden" style="background: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; position: fixed; top:0; left:0; width:100%; height:100%;">
@@ -123,9 +128,11 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         window.db = db;
-        window.dbMethods = { doc, setDoc, getDoc, collection };
+        // Exponemos métodos necesarios para payment.js
+        window.firebaseDB = db; 
     </script>
 
     <script src="script.js"></script>
+    <script src="js/payment.js"></script>
 </body>
 </html>

@@ -43,7 +43,8 @@ async function loadState() {
     if (storyId && window.dbMethods) {
         try {
             const { doc, getDoc } = window.dbMethods;
-            const docRef = doc(window.db, "stories", storyId);
+            // IMPORTANTE: Ahora las cartas aprobadas viven en la colección 'letters'
+            const docRef = doc(window.db, "letters", storyId);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
@@ -66,13 +67,13 @@ let isPlaying = false;
 window.showScreen = function(id) {
     document.querySelectorAll('.screen').forEach(s => {
         s.classList.add('hidden');
-        s.style.display = 'none'; // Refuerzo de ocultación
+        s.style.display = 'none';
     });
     
     const target = document.getElementById(id);
     if (target) {
         target.classList.remove('hidden');
-        target.style.display = (id === 'editor') ? 'block' : 'flex'; // Ajuste según tipo de pantalla
+        target.style.display = (id === 'editor') ? 'block' : 'flex';
     }
     
     const fab = document.getElementById('fab');
@@ -139,17 +140,15 @@ window.toggleMusic = function() {
     if(btn) btn.textContent = isPlaying ? '🔊' : '🎵';
 }
 
-// 7. EDITOR Y PUBLICACIÓN FINAL
+// 7. EDITOR Y LÓGICA DE PAGO
 window.openEditor = function() {
     window.showScreen('editor');
     
-    // Rellenar campos básicos
     document.getElementById('edFrom').value = C.from;
     document.getElementById('edTo').value = C.to;
     document.getElementById('edMsg').value = C.msg;
     document.getElementById('edMusicUrl').value = C.music || '';
 
-    // Rellenar capítulos
     const container = document.getElementById('chaptersEditor');
     if(container) {
         container.innerHTML = C.chapters.map((cap, i) => `
@@ -163,7 +162,6 @@ window.openEditor = function() {
         `).join('');
     }
 
-    // Onboarding automático
     if(firstTime) {
         window.openHelp();
         firstTime = false;
@@ -202,33 +200,33 @@ window.applyEdit = function() {
     alert("✨ Vista previa actualizada.");
 }
 
-window.publishLetter = async function() {
-    const btn = document.querySelector('.share-btn') || document.querySelector('button[onclick="publishLetter()"]');
-    if (!btn) return;
+// --- NUEVA FUNCIÓN PARA INICIAR EL PAGO ---
+window.iniciarProcesoPago = async function() {
+    // 1. Recoger datos actualizados del editor
+    C.from = document.getElementById('edFrom').value;
+    C.to = document.getElementById('edTo').value;
+    C.msg = document.getElementById('edMsg').value;
 
-    const originalText = btn.innerText;
-    btn.innerText = "🚀 Publicando...";
-    btn.disabled = true;
+    C.chapters.forEach((_, i) => {
+        const titleEl = document.getElementById(`edCapT${i}`);
+        const bodyEl = document.getElementById(`edCapB${i}`);
+        if(titleEl) C.chapters[i].t = titleEl.value;
+        if(bodyEl) C.chapters[i].body = bodyEl.value;
+    });
 
-    try {
-        if (!window.dbMethods) throw new Error("Firebase no inicializado");
+    // 2. Validar campos básicos
+    if(!C.from || !C.to) {
+        alert("Por favor, rellena los nombres para continuar 💌");
+        return;
+    }
 
-        const { doc, setDoc } = window.dbMethods;
-        const storyId = Math.random().toString(36).substring(2, 10);
-        
-        await setDoc(doc(window.db, "stories", storyId), C);
-
-        const url = `${window.location.origin}${window.location.pathname}?id=${storyId}`;
-        await navigator.clipboard.writeText(url);
-        
-        alert("¡Felicidades! Tu carta ha sido publicada y el link copiado 💌");
-        
-    } catch (e) {
-        console.error("Error:", e);
-        alert("Hubo un problema al publicar.");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
+    // 3. Llamar a la función de pago de payment.js
+    if(typeof iniciarPago === 'function') {
+        // 'C' es el objeto storyData que espera el backend
+        await iniciarPago(C);
+    } else {
+        console.error("No se encontró iniciarPago en payment.js");
+        alert("Error de sistema. Intenta refrescar la página.");
     }
 }
 
@@ -281,7 +279,7 @@ window.openHelp = function() {
     const modal = document.getElementById('helpModal');
     if (modal) {
         modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // Forzamos visibilidad
+        modal.style.display = 'flex';
     }
 };
 
@@ -289,7 +287,7 @@ window.closeHelp = function() {
     const modal = document.getElementById('helpModal');
     if (modal) {
         modal.classList.add('hidden');
-        modal.style.display = 'none'; // Forzamos ocultación completa
+        modal.style.display = 'none';
     }
 };
 
