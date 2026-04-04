@@ -2,35 +2,57 @@
 
 const FUNCTIONS_URL = '/.netlify/functions';
 
-// Llamada cuando el usuario hace clic en "Generar carta"
+/**
+ * Inicia el proceso de pago enviando los datos de la historia
+ * al backend y redirigiendo a Mercado Pago.
+ */
 async function iniciarPago(storyData) {
   try {
     mostrarLoader('Preparando tu carta...');
 
-    // 1. Pedir al backend que cree la preferencia de pago
+    // 1. Traducimos los nombres para que el backend los entienda
+    // Envolvemos todo en el objeto 'payload' con la propiedad 'storyData'
+    const payload = {
+      storyData: {
+        recipientName: storyData.to,   // 'to' se convierte en 'recipientName'
+        senderName: storyData.from,    // 'from' se convierte en 'senderName'
+        msg: storyData.msg,
+        chapters: storyData.chapters,
+        music: storyData.music
+      }
+    };
+
+    // 2. Pedir al backend que cree la preferencia de pago
     const res = await fetch(`${FUNCTIONS_URL}/create-preference`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ storyData }),
+      body: JSON.stringify(payload),
     });
 
-    if (!res.ok) throw new Error('Error al crear el pago');
+    if (!res.ok) {
+      // Obtenemos el texto del error del servidor para debuggear mejor
+      const errorText = await res.text();
+      throw new Error(`Error en el servidor: ${errorText}`);
+    }
 
     const { preferenceId, sessionId, checkoutUrl } = await res.json();
 
-    // 2. Guardar sessionId en sessionStorage para el polling
+    // 3. Guardar sessionId en sessionStorage para el polling
     sessionStorage.setItem('cda_session', sessionId);
 
-    // 3. Redirigir a MercadoPago
+    // 4. Redirigir a MercadoPago
     window.location.href = checkoutUrl;
 
   } catch (err) {
     console.error(err);
-    mostrarError('Hubo un problema al iniciar el pago. Intenta de nuevo.');
+    mostrarError('Hubo un problema al iniciar el pago. Revisa los datos e intenta de nuevo.');
   }
 }
 
-// En procesando.html: consultar Firestore hasta confirmar el pago
+/**
+ * Realiza polling a Firestore para verificar si el webhook
+ * ya marcó el pago como completado.
+ */
 async function esperarConfirmacion() {
   const sessionId = sessionStorage.getItem('cda_session');
   if (!sessionId) {
@@ -38,7 +60,7 @@ async function esperarConfirmacion() {
     return;
   }
 
-  const MAX_INTENTOS = 20;  // espera hasta ~40 segundos
+  const MAX_INTENTOS = 20;  // Espera hasta ~40 segundos
   const INTERVALO_MS = 2000;
 
   for (let intento = 0; intento < MAX_INTENTOS; intento++) {
@@ -66,11 +88,16 @@ async function esperarConfirmacion() {
   mostrarError('El pago está siendo procesado. Revisa tu correo en unos minutos.');
 }
 
+// Funciones de UI
 function mostrarLoader(mensaje) {
-  document.getElementById('status-msg').textContent = mensaje;
+  const el = document.getElementById('status-msg');
+  if (el) el.textContent = mensaje;
 }
 
 function mostrarError(mensaje) {
-  document.getElementById('status-msg').textContent = mensaje;
-  document.getElementById('status-msg').style.color = 'red';
+  const el = document.getElementById('status-msg');
+  if (el) {
+    el.textContent = mensaje;
+    el.style.color = 'red';
+  }
 }
