@@ -1,13 +1,7 @@
 [build]
-  functions = "netlify/functions"
+  command = "npm install"
   publish = "."
 
 [functions]
+  directory = "netlify/functions"
   node_bundle = true
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Content-Security-Policy = "frame-ancestors 'none'"
