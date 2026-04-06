@@ -5,7 +5,7 @@
 **Plataforma SaaS de cartas digitales personalizadas con modelo de membresía de pago único.**  
 Combina autenticación segura, pagos verificados por backend y un visualizador editorial premium para crear experiencias románticas digitales que duran para siempre.
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/YOUR-BADGE-ID/deploy-status)](https://app.netlify.com/sites/caminodelamor/deploys)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/c5242948-5d6d-43b2-92ce-658d9b2fcce6/deploy-status)](https://app.netlify.com/projects/camino-del-amor/deploys)
 ![Firebase](https://img.shields.io/badge/Firebase-v10-orange?logo=firebase)
 ![MercadoPago](https://img.shields.io/badge/MercadoPago-Checkout_Pro-blue)
 ![License](https://img.shields.io/badge/Licencia-Propietaria-red)
