@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pago no completado — CaminoDelAmor</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="css/error.css">
+</head>
+<body>
+
+  <div class="petals" aria-hidden="true">
+    <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  </div>
+
+  <header class="site-header">
+    <a href="/" class="site-logo">Camino del Amor</a>
+  </header>
+
+  <main class="stage">
+
+    <div class="envelope-wrap" aria-hidden="true">
+      <svg class="envelope-svg" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="92" height="68" rx="6"
+              fill="#f2ead8" stroke="rgba(184,146,74,.4)" stroke-width="1.2"/>
+        <path d="M2 8 L48 40 L94 8"
+              fill="none" stroke="rgba(184,146,74,.35)" stroke-width="1"/>
+        <line x1="2" y1="70" x2="38" y2="38" stroke="rgba(184,146,74,.2)" stroke-width="1"/>
+        <line x1="94" y1="70" x2="58" y2="38" stroke="rgba(184,146,74,.2)" stroke-width="1"/>
+        <circle cx="48" cy="50" r="11"
+                fill="rgba(139,58,74,.08)" stroke="rgba(139,58,74,.35)" stroke-width="1"/>
+        <line x1="42" y1="44" x2="54" y2="56"
+              stroke="#8b3a4a" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="54" y1="44" x2="42" y2="56"
+              stroke="#8b3a4a" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <p class="eyebrow">Pago no completado</p>
+
+    <h1 class="title">
+      Tu carta sigue<br/>
+      <em>esperándote</em>
+    </h1>
+
+    <p class="subtitle">
+      No se realizó ningún cobro.<br/>
+      Puedes intentarlo de nuevo cuando quieras.
+    </p>
+
+    <div class="action-card">
+      <p class="card-label">¿Qué pudo haber pasado?</p>
+      <ul class="reasons">
+        <li>
+          <span class="reason-dot"></span>
+          El pago fue cancelado o rechazado por el banco.
+        </li>
+        <li>
+          <span class="reason-dot"></span>
+          Los fondos en la cuenta o tarjeta no eran suficientes.
+        </li>
+        <li>
+          <span class="reason-dot"></span>
+          La sesión de pago expiró por inactividad.
+        </li>
+        <li>
+          <span class="reason-dot"></span>
+          Se cerró la ventana antes de confirmar.
+        </li>
+      </ul>
+
+      <a href="/" class="btn-primary">Intentar de nuevo</a>
+
+      <a href="https://wa.me/573157035713?text=Hola,%20tuve%20un%20problema%20con%20mi%20pago%20en%20CaminoDelAmor"
+         target="_blank" rel="noopener"
+         class="btn-secondary">
+        Contactar soporte
+      </a>
+    </div>
+
+    <p class="ornament" aria-hidden="true">— ❧ —</p>
+
+    <p class="error-detail" id="error-detail"></p>
+
+  </main>
+
+  <footer class="footer">
+    © 2026 Camino Del Amor · Hecho con amor en Colombia
+  </footer>
+
+  <script src="js/error.js"></script>
+</body>
+</html>
