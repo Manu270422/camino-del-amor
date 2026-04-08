@@ -39,7 +39,6 @@ window.verificarMembresia = async (user) => {
         
         console.log("✅ Usuario autenticado:", user.email);
         
-        // Lógica para mostrar el estado correcto del UI
         if (userProfile && userProfile.hasMembership === true) {
             mostrarEstado('member', user);
         } else {
@@ -179,7 +178,7 @@ async function loadState() {
 }
 
 // ============================================================================
-// 5. NAVEGACIÓN Y RENDERIZADO DEL VISOR DE CARTAS
+// 5. NAVEGACIÓN Y RENDERIZADO DEL VISOR
 // ============================================================================
 window.showScreen = function(id) {
     document.querySelectorAll('.screen').forEach(s => {
@@ -309,7 +308,7 @@ window.toggleMusic = function() {
 }
 
 // ============================================================================
-// 7. EDITORES Y AYUDA
+// 7. EDITORES Y AYUDA (CON SUBIDA DE FOTOS MEJORADA)
 // ============================================================================
 window.openEditor = function() {
     const dash = document.getElementById('landing-dashboard');
@@ -324,15 +323,28 @@ window.openEditor = function() {
     document.getElementById('edMsg').value = C.msg;
     document.getElementById('edMusicUrl').value = C.music || '';
 
+    // ACTUALIZACIÓN: Renderizado de capítulos con labels personalizados
     const container = document.getElementById('chaptersEditor');
     if(container) {
         container.innerHTML = C.chapters.map((cap, i) => `
             <div class="ed-cap-card">
-                <h4>Capítulo ${i + 1}</h4>
-                <input type="text" class="f-input" id="edCapT${i}" value="${cap.t}" placeholder="Título">
-                <textarea class="f-input" id="edCapB${i}" placeholder="Historia...">${cap.body}</textarea>
-                <div class="f-label">Cambiar foto:</div>
-                <input type="file" accept="image/*" onchange="handleImageUpload(event, ${i})">
+                <h4>✦ Capítulo ${i + 1}</h4>
+                <div class="f-group">
+                    <label class="f-label">Título del recuerdo</label>
+                    <input type="text" class="f-input" id="edCapT${i}" value="${cap.t}" placeholder="Ej: Nuestra primera cita">
+                </div>
+                <div class="f-group">
+                    <label class="f-label">La historia</label>
+                    <textarea class="f-input" id="edCapB${i}" placeholder="Escribe aquí tu relato..." style="height: 100px;">${cap.body}</textarea>
+                </div>
+                
+                <div class="f-group file-upload-group">
+                    <label class="f-label">Foto del capítulo</label>
+                    <label for="edCapFile${i}" class="custom-file-upload" id="labelFile${i}">
+                        <i>📷</i> ${cap.img ? 'Cambiar foto...' : 'Seleccionar foto...'}
+                    </label>
+                    <input type="file" id="edCapFile${i}" accept="image/*" onchange="handleImageUpload(event, ${i})" style="display: none;">
+                </div>
             </div>
         `).join('');
     }
@@ -343,17 +355,24 @@ window.openEditor = function() {
     }
 };
 
+// ACTUALIZACIÓN: Manejo de subida con feedback visual en el label
 window.handleImageUpload = async function(e, index) {
     const file = e.target.files[0];
-    if (file) {
-        const label = e.target.previousElementSibling;
-        label.textContent = "⏳ Subiendo...";
+    const label = document.getElementById(`labelFile${index}`); 
+    
+    if (file && label) {
+        label.innerHTML = "<i>⏳</i> Subiendo foto..."; 
+        label.style.borderColor = "#ff9f43"; 
+        
         const url = await uploadToCloudinary(file);
         if (url) {
             C.chapters[index].img = url;
-            label.textContent = "✅ ¡Listo!";
+            label.innerHTML = "<i>✅</i> ¡Foto lista!"; 
+            label.style.borderColor = "var(--accent-rosa)";
+            label.style.color = "var(--text-main)";
         } else {
-            label.textContent = "❌ Error";
+            label.innerHTML = "<i>❌</i> Error al subir";
+            label.style.borderColor = "#ee5253";
         }
     }
 }
@@ -461,35 +480,29 @@ window.closeHelp = function() {
 };
 
 // ============================================================================
-// 8. ARRANQUE PRINCIPAL (Versión Corregida: Salto al Editor)
+// 8. ARRANQUE PRINCIPAL
 // ============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
     
-    // 1. Escuchar el submit del formulario simple (Dashboard)
     const form = document.querySelector('.letter-form');
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            // Si el usuario usa el formulario simple, pasamos los datos al objeto global C
             C.to = document.getElementById('recipient').value.trim();
             C.from = document.getElementById('sender').value.trim();
             C.msg = document.getElementById('message').value.trim();
             C.music = document.getElementById('song')?.value.trim() || '';
-            
-            // ¡SALTO AL EDITOR!
             window.openEditor();
         });
     }
 
-    // 2. Escuchar el botón de publicar del editor
     const btnPublicarExt = document.getElementById('btn-publicar');
     if (btnPublicarExt) {
         btnPublicarExt.addEventListener('click', window.iniciarProcesoPago);
     }
 
-    // 3. LÓGICA DE ENTRADA AL SITIO
     setTimeout(async () => {
-        const isViewer = await loadState(); // ¿Viene por ?id=...?
+        const isViewer = await loadState(); 
         applyConfigUI();
         
         if(typeof window.initCanvas === 'function') window.initCanvas();
@@ -498,7 +511,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         const viewer = document.getElementById('app-viewer');
 
         if (isViewer) {
-            // MODO LECTOR
             if(dash) dash.style.display = 'none';
             if(viewer) viewer.style.display = 'block';
 
@@ -514,18 +526,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 if(fill) fill.style.width = p + '%';
             }, 150);
         } else {
-            // MODO CREADOR O DASHBOARD
-            // VERIFICACIÓN: Si ya es miembro, ¡Mandarlo al Editor directo!
             if (window.userProfile && window.userProfile.hasMembership === true) {
-                console.log("🚀 Miembro detectado: Saltando al Editor Pro...");
                 if(dash) dash.style.display = 'none';
                 if(viewer) viewer.style.display = 'block';
-                window.openEditor(); // Abre el editor de capítulos y activa la Guía Rápida
+                window.openEditor();
             } else {
-                // Si no ha pagado, se queda en la landing blanca
                 if(dash) dash.style.display = 'block';
                 if(viewer) viewer.style.display = 'none';
             }
         }
-    }, 1000); // Espera estratégica para asegurar carga de perfil
+    }, 1000); 
 });
