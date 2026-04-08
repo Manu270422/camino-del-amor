@@ -1335,162 +1335,38 @@ body::after {
 .auth-state { display: none; }
 .auth-state.active { display: block; }
 
-/* --- FUNDAMENTOS DE UI/UX (style.css) --- */
-
-:root {
-    /* Mi nueva paleta propuesta */
-    --bg-deep: #0f0c29;
-    --bg-mid: #302b63;
-    --bg-light: #24243e;
-    --accent-rojo: #ff4b2b;
-    --accent-rosa: #ff416c;
-    --text-main: #f8f9fa; /* Blanco hueso para lectura */
-    --text-muted: #b0b3b8; /* Gris claro para labels */
-    --glass-bg: rgba(255, 255, 255, 0.04);
-    --glass-border: rgba(255, 255, 255, 0.08);
+/* 1. REGRESAR EL BODY A LA NORMALIDAD */
+body {
+    background: #ffffff; /* O el color claro que tenías antes en la landing */
+    color: #333;
+    font-family: 'Poppins', sans-serif;
+    animation: none; /* Quitamos la animación del body global */
 }
 
-body {
-    margin: 0;
-    padding: 0;
-    color: var(--text-main);
-    font-family: 'Poppins', sans-serif; /* Tu Sans Serif limpia */
-    /* PUNTO 1: Fondo Degradado Animado */
-    background: linear-gradient(-45deg, var(--bg-deep), var(--bg-mid), var(--bg-light), #1a1a1a);
+/* 2. EL FONDO ANIMADO SOLO PARA EL EDITOR */
+/* Aplicaremos esta clase al body mediante JS solo cuando se abra el editor */
+body.editor-mode {
+    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1a1a1a);
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
-    overflow-x: hidden;
+    color: #f8f9fa;
 }
 
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+.ed-sheet {
+    background: transparent !important; /* Para que se vea el fondo animado */
 }
 
-/* --- SOLUCIÓN AL PROBLEMA DE TIPOGRAFÍA OSCURA --- */
-/* Aseguramos que los textos del editor siempre sean claros */
-.ed-sheet, .f-label, .ed-cap-card h4, .char-count {
-    color: var(--text-main) !important;
-}
-
-.f-input {
-    color: var(--text-main) !important;
-    background: rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid var(--glass-border) !important;
-}
-
-/* Evitar el efecto de oscurecimiento al cerrar el modal */
-#helpModal {
-    z-index: 2000; /* Super alto */
-}
-
-#editor {
-    z-index: 1000;
-}
-
-/* --- TIPO Y TARJETAS (style.css) --- */
-
-/* PUNTO 2: Tipografía Serif Elegante para Títulos */
-.ed-title, .features-title em, .hero-title em {
-    font-family: 'Playfair Display', serif; /* O la Serif elegante que prefieras */
-    font-weight: 500;
-    font-style: italic;
-    background: linear-gradient(to right, var(--accent-rojo), var(--accent-rosa));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.f-label {
-    font-size: 0.85em;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 5px;
-    display: block;
-}
-
-/* PUNTO 3: UI/UX de los "Capítulos" (Cards y Glassmorphism) */
 .ed-cap-card {
-    /* Glassmorphism Effect */
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    
-    border: 1px solid var(--glass-border);
-    border-radius: 15px; /* Bordes redondeados */
-    padding: 20px;
-    margin-bottom: 20px;
-    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.05); /* Glassmorphism */
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8f9fa;
 }
 
-.ed-cap-card:hover {
-    border-color: rgba(255, 65, 108, 0.3); /* Brillo rosa suave al hover */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-/* Micro-interacción en Inputs */
-.f-input:focus {
-    outline: none;
-    border-color: var(--accent-rosa) !important;
-    box-shadow: 0 0 10px rgba(255, 65, 108, 0.2);
-}
-
-/* --- BOTONES Y CONTROLES (style.css) --- */
-
-/* Botón "¡Entendido!" con Glow */
-.close-help-btn { /* Aseguramos de que esta clase esté en el HTML */
-    background: linear-gradient(to right, var(--accent-rojo), var(--accent-rosa));
-    color: white;
-    border: none;
-    padding: 12px 40px;
-    border-radius: 50px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 75, 43, 0.3); /* Glow suave */
-    transition: all 0.3s ease;
-}
-
-.close-help-btn:hover {
-    box-shadow: 0 6px 20px rgba(255, 75, 43, 0.5); /* Glow intenso */
-    transform: translateY(-2px);
-}
-
-/* PUNTO 4: Subida de Archivos Personalizada (Custom File Input) */
-/* Ocultamos el input nativo */
-.f-group input[type="file"] {
-    width: 0.1px;
-    height: 0.1px;
-    opacity: 0;
-    overflow: hidden;
-    position: absolute;
-    z-index: -1;
-}
-
-/* Estilo para el label que actuará como botón */
-.custom-file-upload {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px dashed var(--glass-border);
-    color: var(--text-muted);
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
-    text-align: center;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.custom-file-upload:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--accent-rosa);
-    color: var(--text-main);
-}
-
-.custom-file-upload i {
-    margin-right: 8px; /* Espacio para el icono */
+/* Estilo para los títulos con Serif solo en el editor */
+body.editor-mode .ed-title {
+    font-family: 'Playfair Display', serif;
+    color: #ff416c;
 }
 
 /* Aseguramos de que los inputs de archivo nativos dentro de ed-sheet estén ocultos */
