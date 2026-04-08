@@ -57,7 +57,6 @@ window.verificarMembresia = async (user) => {
 
 async function cargarPerfil(user) {
     try {
-        // Usamos el puente global definido en index.html
         const docRef = window.doc(window.db, "users", user.uid);
         const snap = await window.getDoc(docRef);
 
@@ -169,14 +168,14 @@ async function loadState() {
             if (docSnap.exists()) {
                 C = docSnap.data();
                 console.log("✅ Carta cargada desde la nube");
-                return true; // Retorna true si estamos viendo una carta
+                return true; 
             }
         } catch (e) { console.error("Error al cargar carta:", e); }
     } 
     
     C = JSON.parse(JSON.stringify(EMPTY_STORY));
     console.log("📝 Iniciando con plantilla limpia");
-    return false; // Retorna false si no hay ID (modo creador)
+    return false; 
 }
 
 // ============================================================================
@@ -310,11 +309,9 @@ window.toggleMusic = function() {
 }
 
 // ============================================================================
-// 7. EDITORES Y PAGOS (Combinados)
+// 7. EDITORES Y AYUDA
 // ============================================================================
-// Formulario viejo (por si usamos el botón 'Personalizar la mía')
 window.openEditor = function() {
-    // Si abren el editor viejo, ocultamos el dashboard nuevo
     const dash = document.getElementById('landing-dashboard');
     const viewer = document.getElementById('app-viewer');
     if(dash) dash.style.display = 'none';
@@ -378,7 +375,6 @@ window.applyEdit = function() {
     alert("✨ Vista previa actualizada.");
 }
 
-// Proceso de pago original
 window.iniciarProcesoPago = async function() {
     C.from = document.getElementById('edFrom')?.value.trim();
     C.to = document.getElementById('edTo')?.value.trim();
@@ -403,14 +399,12 @@ window.iniciarProcesoPago = async function() {
     }
 
     if(typeof window.iniciarPago === 'function') {
-        console.log("🚀 Llamando a pasarela de pago vieja con datos:", C);
         await window.iniciarPago(C); 
     } else {
         alert("Error de sistema. Asegúrate de que payment.js esté cargado.");
     }
 }
 
-// Proceso de pago nuevo
 window.iniciarPagoMembresia = async function () {
     const user = currentUser;
     if (!user) return;
@@ -423,7 +417,6 @@ window.iniciarPagoMembresia = async function () {
 
     try {
         const idToken = await user.getIdToken(false);
-
         const res = await fetch('/.netlify/functions/create-preference', {
             method:  'POST',
             headers: {
@@ -437,7 +430,6 @@ window.iniciarPagoMembresia = async function () {
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const { sessionId, checkoutUrl } = await res.json();
         sessionStorage.setItem('cda_session', sessionId);
         window.location.href = checkoutUrl;
@@ -469,46 +461,35 @@ window.closeHelp = function() {
 };
 
 // ============================================================================
-// 8. ARRANQUE PRINCIPAL (DOM Content Loaded)
+// 8. ARRANQUE PRINCIPAL (Versión Corregida: Salto al Editor)
 // ============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
     
-    // 1. Escuchar el submit del nuevo formulario de Claude
+    // 1. Escuchar el submit del formulario simple (Dashboard)
     const form = document.querySelector('.letter-form');
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const storyData = {
-                recipientName: document.getElementById('recipient').value.trim(),
-                senderName:    document.getElementById('sender').value.trim(),
-                occasion:      document.getElementById('occasion').value,
-                message:       document.getElementById('message').value.trim(),
-                song:          document.getElementById('song')?.value.trim()      || '',
-                photoUrl:      document.getElementById('photo-url')?.value.trim() || '',
-            };
-
-            if (!storyData.recipientName || !storyData.message) {
-                if(window.mostrarToast) window.mostrarToast('Completa al menos el nombre y el mensaje.', 'error');
-                return;
-            }
-
-            if(window.generarCarta) {
-                await window.generarCarta(storyData);
-            } else {
-                console.warn("La función generarCarta de payment.js no está disponible.");
-            }
+            // Si el usuario usa el formulario simple, pasamos los datos al objeto global C
+            C.to = document.getElementById('recipient').value.trim();
+            C.from = document.getElementById('sender').value.trim();
+            C.msg = document.getElementById('message').value.trim();
+            C.music = document.getElementById('song')?.value.trim() || '';
+            
+            // ¡SALTO AL EDITOR!
+            window.openEditor();
         });
     }
 
-    // 2. Escuchar el botón viejo
+    // 2. Escuchar el botón de publicar del editor
     const btnPublicarExt = document.getElementById('btn-publicar');
     if (btnPublicarExt) {
         btnPublicarExt.addEventListener('click', window.iniciarProcesoPago);
     }
 
-    // 3. Determinar qué mostrar según la URL
+    // 3. LÓGICA DE ENTRADA AL SITIO
     setTimeout(async () => {
-        const isViewer = await loadState(); // Retorna true si hay un '?id=...'
+        const isViewer = await loadState(); // ¿Viene por ?id=...?
         applyConfigUI();
         
         if(typeof window.initCanvas === 'function') window.initCanvas();
@@ -517,11 +498,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         const viewer = document.getElementById('app-viewer');
 
         if (isViewer) {
-            // MODO LECTOR: Alguien abrió una carta. Ocultamos el dashboard.
+            // MODO LECTOR
             if(dash) dash.style.display = 'none';
             if(viewer) viewer.style.display = 'block';
 
-            // Animación de carga tuya
             let p = 0;
             const fill = document.getElementById('loadFill');
             const iv = setInterval(() => {
@@ -534,9 +514,18 @@ window.addEventListener('DOMContentLoaded', async () => {
                 if(fill) fill.style.width = p + '%';
             }, 150);
         } else {
-            // MODO CREADOR: Alguien entró a la página principal. Mostramos el Dashboard.
-            if(dash) dash.style.display = 'block';
-            if(viewer) viewer.style.display = 'none'; // Ocultamos el canvas y las pantallas viejas
+            // MODO CREADOR O DASHBOARD
+            // VERIFICACIÓN: Si ya es miembro, ¡Mandarlo al Editor directo!
+            if (window.userProfile && window.userProfile.hasMembership === true) {
+                console.log("🚀 Miembro detectado: Saltando al Editor Pro...");
+                if(dash) dash.style.display = 'none';
+                if(viewer) viewer.style.display = 'block';
+                window.openEditor(); // Abre el editor de capítulos y activa la Guía Rápida
+            } else {
+                // Si no ha pagado, se queda en la landing blanca
+                if(dash) dash.style.display = 'block';
+                if(viewer) viewer.style.display = 'none';
+            }
         }
-    }, 600);
+    }, 1000); // Espera estratégica para asegurar carga de perfil
 });
