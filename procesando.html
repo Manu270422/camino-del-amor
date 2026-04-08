@@ -1,273 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Procesando tu carta — CaminoDelAmor</title>
+  <title>Procesando pago · Camino del Amor</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
 
-  <style>
-    /* ── Reset & base ──────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-    :root {
-      --cream:      #faf6f0;
-      --parchment:  #f2ead8;
-      --ink:        #1c1410;
-      --ink-light:  #4a3f35;
-      --gold:       #b8924a;
-      --gold-light: #d4aa6a;
-      --rose:       #8b3a4a;
-      --rose-light: #c26070;
-      --success:    #2d6a4f;
-    }
-
-    html, body {
-      height: 100%;
-      background: var(--cream);
-      color: var(--ink);
-      font-family: 'Jost', sans-serif;
-      font-weight: 300;
-      overflow: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(184,146,74,.10) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 80% at 80% 100%, rgba(139,58,74,.07) 0%, transparent 55%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .petals {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1;
-      overflow: hidden;
-    }
-
-    .petal {
-      position: absolute;
-      top: -40px;
-      width: 10px;
-      height: 14px;
-      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-      opacity: 0;
-      animation: fall linear infinite;
-    }
-
-    .petal:nth-child(1)  { left:  8%; background: rgba(194,96,112,.25);  width:  9px; height: 13px; animation-duration: 9s;  animation-delay:  0s; }
-    .petal:nth-child(4)  { left: 50%; background: rgba(184,146,74,.22);  width: 12px; height: 16px; animation-duration: 14s; animation-delay:  1s; }
-    .petal:nth-child(7)  { left: 88%; background: rgba(194,96,112,.22);  width: 11px; height: 15px; animation-duration: 13s; animation-delay:  0.5s; }
-
-    @keyframes fall {
-      0%   { transform: translateY(-40px) rotate(0deg); opacity: 0; }
-      5%   { opacity: .7; }
-      90%  { opacity: .4; }
-      100% { transform: translateY(110vh) rotate(520deg); opacity: 0; }
-    }
-
-    .stage {
-      position: relative;
-      z-index: 10;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
-
-    .seal-wrap {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      margin-bottom: 2.8rem;
-    }
-
-    .seal-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 1.5px solid transparent;
-      border-top-color:  var(--gold);
-      animation: spin 3s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .seal-core {
-      position: absolute;
-      inset: 18px;
-      border-radius: 50%;
-      background: var(--parchment);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .heart-svg {
-      width: 36px;
-      height: 36px;
-      animation: pulse 1.8s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.12); opacity: .85; }
-    }
-
-    .title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2rem, 5vw, 2.8rem);
-      color: var(--ink);
-      text-align: center;
-      margin-bottom: .6rem;
-    }
-
-    .title em { font-style: italic; color: var(--rose); }
-
-    .progress-wrap { width: min(340px, 88vw); margin-bottom: 1.4rem; }
-    .progress-track { height: 2px; background: rgba(184,146,74,.18); overflow: hidden; position: relative; }
-    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--rose), var(--gold)); transition: width .6s ease; }
-
-    .status-msg { font-size: .83rem; color: var(--ink-light); text-align: center; min-height: 1.2em; }
-
-    .success-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: var(--cream);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .7s ease;
-    }
-
-    .success-overlay.visible { opacity: 1; pointer-events: all; }
-
-    .check-circle {
-      width: 80px; height: 80px; border-radius: 50%;
-      border: 1.5px solid var(--success);
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1rem;
-    }
-
-    .error-box {
-      display: none;
-      margin-top: 2rem;
-      padding: 1.2rem;
-      border: 1px solid var(--rose);
-      border-radius: 6px;
-      text-align: center;
-    }
-    .error-box.visible { display: block; }
-  </style>
+  <link rel="stylesheet" href="css/procesando.css">
 </head>
 <body>
 
-  <div class="petals"><div class="petal"></div><div class="petal"></div><div class="petal"></div></div>
-
-  <main class="stage">
-    <div class="seal-wrap">
-      <div class="seal-ring"></div>
-      <div class="seal-core">
-        <svg class="heart-svg" viewBox="0 0 40 36" fill="none"><path d="M20 33S3 22 3 11.5A8.5 8.5 0 0 1 20 8a8.5 8.5 0 0 1 17 3.5C37 22 20 33 20 33Z" fill="rgba(139,58,74,.15)" stroke="var(--rose)" stroke-width="1.2"/></svg>
-      </div>
+  <div class="card">
+    <div class="seal">
+      <div class="ring"></div>
+      <div class="ring s"></div>
+      <div class="inner">✦</div>
     </div>
 
-    <h1 class="title">Sellando tu <em>carta</em></h1>
-    <div class="progress-wrap"><div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div></div>
-    <p class="status-msg" id="status-msg">Iniciando verificación...</p>
+    <h1>Activando tu <em>membresía</em>…</h1>
+    <p class="subtitle">
+      Estamos verificando tu pago con Mercado Pago.<br/>
+      Esto solo toma unos segundos.
+    </p>
 
-    <div class="error-box" id="error-box">
-      <p id="error-msg">No pudimos confirmar el pago automáticamente.</p>
-      <a href="/" style="color: var(--gold); text-decoration: none; margin-top: 10px; display: block;">Volver al inicio</a>
+    <div class="progress-track">
+      <div class="progress-fill" id="pFill"></div>
     </div>
-  </main>
+    <p class="status-msg" id="statusMsg">Conectando con el servidor…</p>
 
-  <div class="success-overlay" id="success-overlay">
-    <div class="check-circle"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-    <h2 class="title">¡Pago Confirmado!</h2>
-    <p>Redirigiendo a tu carta...</p>
+    <div class="error-state" id="errorState">
+      <p id="errorMsg">No pudimos verificar tu pago. Si ya fue cobrado, escríbenos.</p>
+      <a href="/" class="btn-back">Volver al inicio</a>
+    </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
-
-    // MISMAS CREDENCIALES DEL INDEX.HTML
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
-      authDomain: "caminodelamor-270422.firebaseapp.com",
-      projectId: "caminodelamor-270422",
-      storageBucket: "caminodelamor-270422.firebasestorage.app",
-      messagingSenderId: "382407116447",
-      appId: "1:382407116447:web:0b8eb1f283fde40f1644aa",
-      measurementId: "G-HHBE3ZXNE3"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const progressBar = document.getElementById('progress-bar');
-    const statusMsg = document.getElementById('status-msg');
-    const successOverlay = document.getElementById('success-overlay');
-    const errorBox = document.getElementById('error-box');
-
-    async function monitorearPago() {
-      const sessionId = sessionStorage.getItem('cda_session');
-      
-      if (!sessionId) {
-        window.location.href = '/';
-        return;
-      }
-
-      statusMsg.textContent = "Buscando tu orden...";
-      progressBar.style.width = "30%";
-
-      // Escuchar cambios en tiempo real en el documento del pago
-      const unsub = onSnapshot(doc(db, "payments", sessionId), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          
-          if (data.status === 'approved' || data.paid === true) {
-            progressBar.style.width = "100%";
-            statusMsg.textContent = "¡Pago verificado!";
-            successOverlay.classList.add('visible');
-            unsub(); // Detener la escucha
-
-            setTimeout(() => {
-              window.location.href = `index.html?id=${data.letterId}`;
-            }, 2500);
-          } else {
-            statusMsg.textContent = "Esperando confirmación de Mercado Pago...";
-            progressBar.style.width = "60%";
-          }
-        }
-      });
-
-      // Timeout de seguridad: Si después de 60 segundos no hay nada, mostrar error
-      setTimeout(() => {
-        unsub();
-        if (!successOverlay.classList.contains('visible')) {
-          errorBox.classList.add('visible');
-          statusMsg.textContent = "El proceso está tardando más de lo esperado.";
-        }
-      }, 60000);
-    }
-
-    monitorearPago();
-  </script>
+  <script src="js/procesando.js"></script>
 </body>
 </html>
