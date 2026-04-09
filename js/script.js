@@ -3,18 +3,21 @@
 // ============================================================================
 // 1. ESTADO GLOBAL Y CONFIGURACIÓN
 // ============================================================================
-let currentUser = null;   // Objeto Firebase User
-let userProfile = null;   // Documento de Firestore { hasMembership, ... }
+let currentUser = null; 
+let userProfile = null; 
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/dbccdt3wq/upload`;
 const UPLOAD_PRESET = 'caminodelamor_preset';
 
+// Estructura UNIFICADA (Nombres modernos para el backend)
 const EMPTY_STORY = {
-    from: 'Tu nombre',
-    to: 'Su nombre',
+    senderName: 'Tu nombre',
+    recipientName: 'Su nombre',
     date: new Date().toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' }),
-    msg: 'Escribe aquí tu mensaje de cierre...',
-    music: '', 
+    message: 'Escribe aquí tu mensaje de cierre...',
+    occasion: 'amor',
+    song: '', 
+    photoUrl: '',
     chapters: [
         { t: 'Capítulo 1', body: 'Cuenta aquí tu primera historia...', img: '' },
         { t: 'Capítulo 2', body: 'Continúa tu relato...', img: '' },
@@ -29,27 +32,19 @@ let isPlaying = false;
 const audio = document.getElementById('bgAudio');
 
 // ============================================================================
-// 2. LÓGICA DE AUTENTICACIÓN Y PERFIL
+// 2. LÓGICA DE AUTENTICACIÓN
 // ============================================================================
 window.verificarMembresia = async (user) => {
     if (user) {
         currentUser = user;
-        window.currentUser = user;
+        window.currentUser = user; // Sincronización para payment.js
         await cargarPerfil(user);
-        
         console.log("✅ Usuario autenticado:", user.email);
-        
-        // Lógica para mostrar el estado correcto del UI
-        if (userProfile && userProfile.hasMembership === true) {
-            mostrarEstado('member', user);
-        } else {
-            mostrarEstado('no-member', user);
-        }
+        mostrarEstado(userProfile?.hasMembership ? 'member' : 'no-member', user);
     } else {
         currentUser = null;
         userProfile = null;
         window.currentUser = null;
-        window.userProfile = null;
         console.log("❌ Usuario desconectado");
         mostrarEstado('guest', null);
     }
@@ -57,17 +52,10 @@ window.verificarMembresia = async (user) => {
 
 async function cargarPerfil(user) {
     try {
-        // Usamos el puente global definido en index.html
         const docRef = window.doc(window.db, "users", user.uid);
         const snap = await window.getDoc(docRef);
-
-        if (!snap.exists()) {
-            userProfile = { hasMembership: false };
-        } else {
-            userProfile = snap.data();
-        }
+        userProfile = snap.exists() ? snap.data() : { hasMembership: false };
         window.userProfile = userProfile;
-        console.log("Perfil cargado:", userProfile);
     } catch (e) {
         console.error("Error cargando perfil:", e);
     }
@@ -76,202 +64,45 @@ async function cargarPerfil(user) {
 window.loginConGoogle = async function() {
     try {
         const provider = new window.GoogleAuthProvider();
-        await window.signInWithPopup(window.auth, provider);
+        return await window.signInWithPopup(window.auth, provider);
     } catch (err) {
         console.error('Error en login:', err);
-        if (window.mostrarToast) window.mostrarToast('No se pudo iniciar sesión. Intenta de nuevo.', 'error');
-        else alert('No se pudo iniciar sesión con Google.');
+        if (window.mostrarToast) window.mostrarToast('Error al iniciar sesión.', 'error');
     }
-};
-
-window.cerrarSesion = function () {
-    if (window.auth && window.signOut) {
-        window.signOut(window.auth);
-    }
-};
-
-window.ejecutarLogin = async () => {
-    await window.loginConGoogle();
 };
 
 // ============================================================================
-// 3. UI DEL DASHBOARD
+// 3. UI Y RENDERIZADO
 // ============================================================================
 function mostrarEstado(estado, user) {
     document.querySelectorAll('.auth-state').forEach(el => el.classList.remove('active'));
-
     const ids = { guest: 'state-guest', 'no-member': 'state-no-member', member: 'state-member' };
     const targetEl = document.getElementById(ids[estado]);
     if (targetEl) targetEl.classList.add('active');
 
-    if (!user) return;
-
-    const displayName = user.displayName || 'Usuario';
-    const initial     = displayName.charAt(0).toUpperCase();
-
-    if (estado === 'no-member') {
-        const nameNm = document.getElementById('name-nm');
-        const emailNm = document.getElementById('email-nm');
-        if(nameNm) nameNm.textContent  = displayName;
-        if(emailNm) emailNm.textContent = user.email || '';
-        _setAvatar('avatar-nm', user.photoURL, displayName, initial);
-    }
-
-    if (estado === 'member') {
-        const nameM = document.getElementById('name-m');
-        if(nameM) nameM.textContent = displayName;
-        _setAvatar('avatar-m', user.photoURL, displayName, initial);
+    if (user && (estado === 'no-member' || estado === 'member')) {
+        const suffix = estado === 'member' ? 'm' : 'nm';
+        const nameEl = document.getElementById(`name-${suffix}`);
+        if(nameEl) nameEl.textContent = user.displayName || 'Usuario';
+        _setAvatar(`avatar-${suffix}`, user.photoURL, user.displayName);
     }
 }
 
-function _setAvatar(id, photoURL, displayName, initial) {
+function _setAvatar(id, url, name) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (photoURL) {
-        el.outerHTML = `<img id="${id}" class="user-avatar" style="width:40px; height:40px; border-radius:50%; object-fit:cover;" src="${photoURL}" alt="${displayName}"/>`;
-    } else {
-        el.textContent = initial;
-    }
-}
-
-window.updateCharCount = function (el) {
-    const counter = document.getElementById('char-count');
-    if (counter) counter.textContent = `${el.value.length} / 800`;
-};
-
-// ============================================================================
-// 4. LÓGICA DE SUBIDA A CLOUDINARY Y CARGA DE ESTADO
-// ============================================================================
-async function uploadToCloudinary(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', UPLOAD_PRESET);
-    
-    try {
-        const response = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
-        const data = await response.json();
-        return data.secure_url; 
-    } catch (err) {
-        console.error("Error Cloudinary:", err);
-        return null;
-    }
-}
-
-async function loadState() {
-    const p = new URLSearchParams(window.location.search);
-    const storyId = p.get('id');
-
-    if (storyId && window.db) {
-        try {
-            const docRef = window.doc(window.db, "letters", storyId);
-            const docSnap = await window.getDoc(docRef);
-
-            if (docSnap.exists()) {
-                C = docSnap.data();
-                console.log("✅ Carta cargada desde la nube");
-                return true; // Retorna true si estamos viendo una carta
-            }
-        } catch (e) { console.error("Error al cargar carta:", e); }
-    } 
-    
-    C = JSON.parse(JSON.stringify(EMPTY_STORY));
-    console.log("📝 Iniciando con plantilla limpia");
-    return false; // Retorna false si no hay ID (modo creador)
-}
-
-// ============================================================================
-// 5. NAVEGACIÓN Y RENDERIZADO DEL VISOR DE CARTAS
-// ============================================================================
-window.showScreen = function(id) {
-    document.querySelectorAll('.screen').forEach(s => {
-        s.classList.add('hidden');
-        s.style.display = 'none';
-    });
-    
-    const target = document.getElementById(id);
-    if (target) {
-        target.classList.remove('hidden');
-        target.style.display = (id === 'editor') ? 'block' : 'flex';
-    }
-    
-    const fab = document.getElementById('fab');
-    const mBtn = document.getElementById('musicBtn');
-    
-    if (fab) fab.style.display = (id === 's0' || id === 'editor') ? 'none' : 'flex';
-    if (mBtn) mBtn.style.display = (id === 's0') ? 'none' : 'flex';
-}
-
-window.renderChapter = function() {
-    const cap = C.chapters[currentCh];
-    const total = C.chapters.length;
-    
-    const progFill = document.getElementById('progFill');
-    if(progFill) progFill.style.width = ((currentCh / (total - 1)) * 100) + '%';
-    
-    let imgHTML = cap.img ? `<img src="${cap.img}" class="ch-photo show" onerror="this.style.display='none'">` : '';
-    
-    const chWrap = document.getElementById('chWrap');
-    if(chWrap) {
-        chWrap.innerHTML = `
-            <p class="ch-num">Capítulo ${currentCh + 1} de ${total}</p>
-            <h2 class="ch-title">${cap.t}</h2>
-            <div class="ch-body">
-                ${imgHTML}
-                <p>${cap.body.replace(/\n/g, '<br>')}</p>
-            </div>
-            <div class="nav-row">
-                ${currentCh > 0 ? `<button class="nav-btn" onclick="prevCh()">←</button>` : '<div></div>'}
-                <button class="nav-btn go" onclick="nextCh()">
-                    ${currentCh < total - 1 ? 'Siguiente →' : 'Ver el final ✦'}
-                </button>
-            </div>
-        `;
-    }
-}
-
-window.startStory = function() {
-    currentCh = 0;
-    window.showScreen('s2');
-    window.renderChapter();
-
-    if (C.music && audio) {
-        audio.src = C.music; 
-        audio.load();
-        audio.play().then(() => { 
-            isPlaying = true; 
-            const btn = document.getElementById('musicBtn');
-            if(btn) btn.textContent = '🔊';
-        }).catch(() => {});
-    }
-}
-
-window.nextCh = function() {
-    if (currentCh < C.chapters.length - 1) { 
-        currentCh++; 
-        window.renderChapter(); 
-    } 
-    else { 
-        window.showScreen('s3'); 
-    }
-}
-
-window.prevCh = function() {
-    if (currentCh > 0) { 
-        currentCh--; 
-        window.renderChapter(); 
-    }
+    if (url) el.outerHTML = `<img id="${id}" class="user-avatar" src="${url}" alt="${name}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"/>`;
+    else el.textContent = name ? name[0].toUpperCase() : '?';
 }
 
 function applyConfigUI() {
-    const fDate = document.getElementById('fDate');
-    if(fDate) fDate.textContent = C.date;
-    
     const elements = {
-        iFrom: C.from ? `De parte de ${C.from}` : 'Cargando...',
-        iTitle: C.to ? `"${C.to}, hay algo que necesito decirte"` : 'Personaliza tu mensaje',
-        fTo: `Para ${C.to || 'ti'}`,
-        fTitle: `Te sigo eligiendo, ${C.to || ''}`,
-        fMsg: C.msg || 'Tus palabras aparecerán aquí.'
+        fDate: C.date,
+        iFrom: `De parte de ${C.senderName || C.from || ''}`,
+        iTitle: `"${C.recipientName || C.to || ''}, hay algo que decirte"`,
+        fTo: `Para ${C.recipientName || C.to || ''}`,
+        fTitle: `Te sigo eligiendo, ${C.recipientName || C.to || ''}`,
+        fMsg: C.message || C.msg || ''
     };
 
     for (let id in elements) {
@@ -281,108 +112,13 @@ function applyConfigUI() {
 }
 
 // ============================================================================
-// 6. MANEJO DE AUDIO
+// 4. FLUJO DE PUBLICACIÓN
 // ============================================================================
-window.handleMusicUpload = async function(e) {
-    const file = e.target.files[0];
-    const label = document.getElementById('musicLabel');
-    
-    if (file) {
-        label.textContent = "⏳ Subiendo música...";
-        const url = await uploadToCloudinary(file);
-        
-        if (url) {
-            C.music = url; 
-            label.textContent = "✅ Música lista";
-            if (audio) { audio.src = url; audio.load(); }
-        } else {
-            label.textContent = "❌ Error al subir audio";
-        }
-    }
-}
 
-window.toggleMusic = function() {
-    if (!audio) return;
-    if (isPlaying) { audio.pause(); isPlaying = false; } 
-    else { audio.play().then(() => { isPlaying = true; }).catch(() => {}); }
-    const btn = document.getElementById('musicBtn');
-    if(btn) btn.textContent = isPlaying ? '🔊' : '🎵';
-}
-
-// ============================================================================
-// 7. EDITORES Y PAGOS (Combinados)
-// ============================================================================
-// Formulario viejo (por si usamos el botón 'Personalizar la mía')
-window.openEditor = function() {
-    // Si abren el editor viejo, ocultamos el dashboard nuevo
-    const dash = document.getElementById('landing-dashboard');
-    const viewer = document.getElementById('app-viewer');
-    if(dash) dash.style.display = 'none';
-    if(viewer) viewer.style.display = 'block';
-
-    window.showScreen('editor');
-    
-    document.getElementById('edFrom').value = C.from;
-    document.getElementById('edTo').value = C.to;
-    document.getElementById('edMsg').value = C.msg;
-    document.getElementById('edMusicUrl').value = C.music || '';
-
-    const container = document.getElementById('chaptersEditor');
-    if(container) {
-        container.innerHTML = C.chapters.map((cap, i) => `
-            <div class="ed-cap-card">
-                <h4>Capítulo ${i + 1}</h4>
-                <input type="text" class="f-input" id="edCapT${i}" value="${cap.t}" placeholder="Título">
-                <textarea class="f-input" id="edCapB${i}" placeholder="Historia...">${cap.body}</textarea>
-                <div class="f-label">Cambiar foto:</div>
-                <input type="file" accept="image/*" onchange="handleImageUpload(event, ${i})">
-            </div>
-        `).join('');
-    }
-
-    if(firstTime) {
-        window.openHelp();
-        firstTime = false;
-    }
-};
-
-window.handleImageUpload = async function(e, index) {
-    const file = e.target.files[0];
-    if (file) {
-        const label = e.target.previousElementSibling;
-        label.textContent = "⏳ Subiendo...";
-        const url = await uploadToCloudinary(file);
-        if (url) {
-            C.chapters[index].img = url;
-            label.textContent = "✅ ¡Listo!";
-        } else {
-            label.textContent = "❌ Error";
-        }
-    }
-}
-
-window.applyEdit = function() {
-    C.from = document.getElementById('edFrom').value;
-    C.to = document.getElementById('edTo').value;
-    C.msg = document.getElementById('edMsg').value;
-
-    C.chapters.forEach((_, i) => {
-        const titleEl = document.getElementById(`edCapT${i}`);
-        const bodyEl = document.getElementById(`edCapB${i}`);
-        if(titleEl) C.chapters[i].t = titleEl.value;
-        if(bodyEl) C.chapters[i].body = bodyEl.value;
-    });
-
-    applyConfigUI();
-    window.showScreen('s1');
-    alert("✨ Vista previa actualizada.");
-}
-
-// Proceso de pago original
 window.iniciarProcesoPago = async function() {
-    C.from = document.getElementById('edFrom')?.value.trim();
-    C.to = document.getElementById('edTo')?.value.trim();
-    C.msg = document.getElementById('edMsg')?.value.trim();
+    C.senderName = document.getElementById('edFrom')?.value.trim();
+    C.recipientName = document.getElementById('edTo')?.value.trim();
+    C.message = document.getElementById('edMsg')?.value.trim();
 
     C.chapters.forEach((_, i) => {
         const titleEl = document.getElementById(`edCapT${i}`);
@@ -391,89 +127,31 @@ window.iniciarProcesoPago = async function() {
         if(bodyEl) C.chapters[i].body = bodyEl.value;
     });
 
-    if(!C.from || !C.to || !C.msg) {
-        alert("Por favor, completa los nombres y el mensaje final 💌");
+    if(!C.senderName || !C.recipientName || !C.message) {
+        alert("Completa los nombres y el mensaje final 💌");
         return;
     }
 
     if (!currentUser) {
-        alert("Para guardar tu historia, por favor inicia sesión primero ✨");
+        alert("Inicia sesión para guardar tu historia ✨");
         await window.loginConGoogle();
         return; 
     }
 
-    if(typeof window.iniciarPago === 'function') {
-        console.log("🚀 Llamando a pasarela de pago vieja con datos:", C);
-        await window.iniciarPago(C); 
+    if(window.generarCarta) {
+        await window.generarCarta(C); 
     } else {
-        alert("Error de sistema. Asegúrate de que payment.js esté cargado.");
+        alert("Error: payment.js no cargado.");
     }
 }
 
-// Proceso de pago nuevo
-window.iniciarPagoMembresia = async function () {
-    const user = currentUser;
-    if (!user) return;
-
-    const btn = document.querySelector('.btn-pay');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>Conectando con Mercado Pago…';
-    }
-
-    try {
-        const idToken = await user.getIdToken(false);
-
-        const res = await fetch('/.netlify/functions/create-preference', {
-            method:  'POST',
-            headers: {
-                'Content-Type':  'application/json',
-                'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({
-                userId:    user.uid,
-                storyData: { recipientName: '', senderName: '' },
-            }),
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const { sessionId, checkoutUrl } = await res.json();
-        sessionStorage.setItem('cda_session', sessionId);
-        window.location.href = checkoutUrl;
-
-    } catch (err) {
-        console.error('[CDA] Error iniciando pago de membresía:', err);
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = 'Obtener membresía de por vida<span class="price-tag">10.000 COP · pago único</span>';
-        }
-        if(window.mostrarToast) window.mostrarToast('Error al iniciar el pago. Intenta de nuevo.', 'error');
-    }
-};
-
-window.openHelp = function() {
-    const modal = document.getElementById('helpModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex';
-    }
-};
-
-window.closeHelp = function() {
-    const modal = document.getElementById('helpModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = 'none';
-    }
-};
-
 // ============================================================================
-// 8. ARRANQUE PRINCIPAL (DOM Content Loaded)
+// 5. EVENTOS DE CARGA Y LÓGICA DE LANDING (CORREGIDO)
 // ============================================================================
-window.addEventListener('DOMContentLoaded', async () => {
+
+window.addEventListener('DOMContentLoaded', () => {
     
-    // 1. Escuchar el submit del nuevo formulario de Claude
+    // Configuración del Formulario del Dashboard
     const form = document.querySelector('.letter-form');
     if (form) {
         form.addEventListener('submit', async (e) => {
@@ -483,60 +161,96 @@ window.addEventListener('DOMContentLoaded', async () => {
                 senderName:    document.getElementById('sender').value.trim(),
                 occasion:      document.getElementById('occasion').value,
                 message:       document.getElementById('message').value.trim(),
-                song:          document.getElementById('song')?.value.trim()      || '',
+                song:          document.getElementById('song')?.value.trim() || '',
                 photoUrl:      document.getElementById('photo-url')?.value.trim() || '',
             };
 
-            if (!storyData.recipientName || !storyData.message) {
-                if(window.mostrarToast) window.mostrarToast('Completa al menos el nombre y el mensaje.', 'error');
-                return;
-            }
-
-            if(window.generarCarta) {
-                await window.generarCarta(storyData);
-            } else {
-                console.warn("La función generarCarta de payment.js no está disponible.");
-            }
+            if(window.generarCarta) await window.generarCarta(storyData);
         });
     }
 
-    // 2. Escuchar el botón viejo
+    // Botón Publicar
     const btnPublicarExt = document.getElementById('btn-publicar');
-    if (btnPublicarExt) {
-        btnPublicarExt.addEventListener('click', window.iniciarProcesoPago);
+    if (btnPublicarExt) btnPublicarExt.addEventListener('click', window.iniciarProcesoPago);
+});
+
+// ============================================================================
+// 6. NAVEGACIÓN Y LECTOR DE CARTA (EL "SWITCH")
+// ============================================================================
+
+window.openEditor = function() {
+    window.location.href = 'personalizar.html';
+};
+
+/**
+ * initCartaReader: Maneja si mostramos la Landing Page o el Visor de Cartas
+ */
+(function initCartaReader() {
+    const params   = new URLSearchParams(window.location.search);
+    const letterId = params.get('id');
+    
+    // --- LA SOLUCIÓN AL "BLANCO" ---
+
+        // --- LA SOLUCIÓN AL "BLANCO" ---
+
+    if (!letterId) {
+        console.log("🏠 Modo Landing: No hay ID, mostrando pantalla de bienvenida.");
+        const s1 = document.getElementById('s1');
+
+        // Quitamos 'hidden' de la pantalla de inicio y nos aseguramos que el dashboard sea visible
+
+        if(s1) s1.classList.remove('hidden'); 
+
+        // Si tienes un contenedor principal para el visor, asegúrate que se vea
+
+        const appViewer = document.getElementById('app-viewer');
+        if(appViewer) appViewer.style.display = 'block';
+        return;
     }
 
-    // 3. Determinar qué mostrar según la URL
-    setTimeout(async () => {
-        const isViewer = await loadState(); // Retorna true si hay un '?id=...'
-        applyConfigUI();
-        
-        if(typeof window.initCanvas === 'function') window.initCanvas();
+    window.CARTA_ID = letterId;
 
-        const dash = document.getElementById('landing-dashboard');
-        const viewer = document.getElementById('app-viewer');
-
-        if (isViewer) {
-            // MODO LECTOR: Alguien abrió una carta. Ocultamos el dashboard.
-            if(dash) dash.style.display = 'none';
-            if(viewer) viewer.style.display = 'block';
-
-            // Animación de carga tuya
-            let p = 0;
-            const fill = document.getElementById('loadFill');
-            const iv = setInterval(() => {
-                p += Math.random() * 25;
-                if (p >= 100) {
-                    p = 100;
-                    clearInterval(iv);
-                    setTimeout(() => window.showScreen('s1'), 500);
-                }
-                if(fill) fill.style.width = p + '%';
-            }, 150);
-        } else {
-            // MODO CREADOR: Alguien entró a la página principal. Mostramos el Dashboard.
-            if(dash) dash.style.display = 'block';
-            if(viewer) viewer.style.display = 'none'; // Ocultamos el canvas y las pantallas viejas
+    async function cargarCarta() {
+        if (!window.db || !window.doc || !window.getDoc) {
+            // Reintento pequeño por si Firebase tarda en cargar
+            setTimeout(cargarCarta, 200);
+            return;
         }
-    }, 600);
-});
+        try {
+            const snap = await window.getDoc(window.doc(window.db, 'letters', letterId));
+            if (snap.exists()) {
+                window.CARTA_DATA = snap.data();
+                C = snap.data(); // Sincronizamos con el estado global
+                
+                applyConfigUI();
+                
+                // Ocultamos dashboard si existe, mostramos visor
+                if(document.getElementById('landing-dashboard')) 
+                    document.getElementById('landing-dashboard').style.display = 'none';
+                
+                if(document.getElementById('app-viewer')) 
+                    document.getElementById('app-viewer').style.display = 'block';
+                
+                // Disparamos evento por si otros scripts lo necesitan
+                document.dispatchEvent(new CustomEvent('cartaLoaded', { detail: snap.data() }));
+                
+                // Forzamos mostrar la primera pantalla de la carta
+                const s1 = document.getElementById('s1');
+                if(s1) s1.classList.remove('hidden');
+
+            } else {
+                console.warn('Carta no encontrada:', letterId);
+                window.location.href = 'index.html'; // Redirigir a landing si el ID no existe
+            }
+        } catch (err) {
+            console.error('Error cargando carta:', err);
+        }
+    }
+
+    // Ejecutar carga con un pequeño delay para asegurar que Firebase (db) esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(cargarCarta, 800));
+    } else {
+        setTimeout(cargarCarta, 800);
+    }
+})();

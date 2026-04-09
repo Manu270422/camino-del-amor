@@ -1,3 +1,5 @@
+// personalizar.js - Versión Actualizada
+
 // Configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
@@ -29,13 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-guardado al escribir
   const fields = ['chapter-title', 'chapter-body', 'chapter-img', 'chapter-video'];
   fields.forEach(id => {
-    document.getElementById(id).addEventListener('input', updateCurrentChapterData);
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateCurrentChapterData);
   });
 });
 
 // ── Lógica de Capítulos ───────────────────────────────────────────
 function renderChapterList() {
   const container = document.getElementById('chapter-list');
+  if (!container) return;
   container.innerHTML = '';
 
   chapters.forEach((ch, index) => {
@@ -57,8 +61,11 @@ function loadChapter(id) {
   const ch = chapters.find(c => c.id === id);
   if (!ch) return;
 
-  document.getElementById('editor-empty').style.display = 'none';
-  document.getElementById('editor-content').style.display = 'block';
+  const emptyView = document.getElementById('editor-empty');
+  const contentView = document.getElementById('editor-content');
+  
+  if(emptyView) emptyView.style.display = 'none';
+  if(contentView) contentView.style.display = 'block';
 
   document.getElementById('chapter-title').value = ch.title;
   document.getElementById('chapter-body').value = ch.body;
@@ -130,12 +137,7 @@ async function publishStory() {
       target: targetName,
       song: musicUrl,
       photoUrl: chapters[0].imgUrl || '',
-      chapters: chapters.map(c => ({
-        t: c.title,
-        body: c.body,
-        img: c.imgUrl,
-        videoUrl: c.videoUrl,
-      })),
+      chapters: window.getChapters(),
     };
 
     const res = await fetch('/.netlify/functions/save-letter', {
@@ -171,3 +173,7 @@ function showToast(msg, tipo = '') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ── EXPOSICIÓN GLOBAL PARA OTROS SCRIPTS ──────────────────────────
+// Exponemos los capítulos para que el botón de publicar pueda leerlos desde el HTML
+window.getChapters = () => chapters;

@@ -212,6 +212,15 @@ body {
 
 .config-title { font-size: 1rem; margin-bottom: 1.5rem; }
 
+/* ESTILO DEL MENSAJE DE ESTADO (TOQUE PRO) */
+#status-msg {
+    transition: all 0.3s ease;
+    text-align: center;
+    font-family: 'Jost', sans-serif;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+
 .finish-zone {
   margin-top: auto;
   padding-top: 2rem;

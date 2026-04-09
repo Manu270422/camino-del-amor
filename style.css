@@ -1373,3 +1373,147 @@ body.editor-mode .ed-title {
 .ed-sheet input[type="file"] {
     display: none !important;
 }
+
+.btn-principal {
+    background: linear-gradient(135deg, #ff4e50, #f9d423); /* Un rojo-naranja romántico */
+    color: white;
+    padding: 12px 28px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 50px; /* Bordes totalmente redondeados */
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 78, 80, 0.3);
+    transition: all 0.3s ease; /* Para que el efecto sea suave */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-principal:hover {
+    transform: translateY(-3px); /* Se levanta un poco */
+    box-shadow: 0 6px 20px rgba(255, 78, 80, 0.4);
+    filter: brightness(1.1); /* Brilla un poquito más */
+}
+
+.btn-principal:active {
+    transform: translateY(0); /* Al hacer click baja */
+} 
+
+/* Este es el contenedor blanco/transparente que rodea el contenido */
+.intro-card {
+    display: flex;
+    flex-direction: column;  /* Alinea los elementos en vertical */
+    align-items: center;     /* Centra todo horizontalmente */
+    justify-content: center; /* Centra todo verticalmente */
+    text-align: center;      /* Asegura que el texto largo también se vea centrado */
+    padding: 40px 20px;      /* Espacio interno para que no respire */
+    max-width: 500px;        /* Ancho máximo para que no se estire demasiado en PC */
+    margin: 0 auto;          /* Centra la tarjeta completa en la pantalla */
+}
+
+/* Ajuste opcional para el botón para darle aire */
+.btn-principal {
+    margin-top: 25px;        /* Espacio extra arriba del botón */
+    width: fit-content;      /* El botón solo ocupa lo que mide su texto */
+}
+
+/* Estilo para que la pantalla completa (s1) ocupe todo el alto */
+#s1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;       /* Ocupa el 100% de la altura de la pantalla del celular */
+} 
+
+#s1 {
+    display: flex;
+    align-items: center;      /* Centra verticalmente */
+    justify-content: center;   /* Centra horizontalmente */
+    min-height: 100vh;         /* Ocupa toda la altura de la pantalla */
+    width: 100%;
+    background-color: #0b0a12; /* Asegúrate que combine con tu fondo oscuro */
+    padding: 20px;
+    box-sizing: border-box;
+} 
+
+.intro-card {
+    background: rgba(255, 255, 255, 0.05); /* Fondo sutilmente claro */
+    backdrop-filter: blur(15px);           /* Efecto de vidrio desenfocado */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 50px 30px;                    /* Más espacio interno */
+    border-radius: 24px;
+    max-width: 450px;                      /* Ancho ideal para lectura */
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* Sombra profunda profesional */
+}
+
+.intro-title {
+    font-size: 2.2rem;   /* Un poco más grande para que destaque */
+    margin: 15px 0;
+    background: linear-gradient(to right, #ff9a9e, #fad0c4); /* Degradado en el texto */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.intro-sub {
+    color: #ccc;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 30px; /* Separa el texto del botón */
+}
+
+/* 1. Contenedor principal: Ocupa toda la pantalla y centra la tarjeta */
+#s1 {
+    display: flex;
+    align-items: center;      /* Centra verticalmente */
+    justify-content: center;   /* Centra horizontalmente */
+    min-height: 100vh;         /* Altura completa del navegador */
+    width: 100%;
+    background-color: #0b0a12; /* Tu color oscuro de fondo */
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* 2. La tarjeta: Ahora con más presencia y orden */
+.intro-card {
+    background: rgba(255, 255, 255, 0.03); /* Fondo casi invisible pero elegante */
+    backdrop-filter: blur(15px);           /* Desenfoque de fondo tipo iPhone */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 60px 40px;                    /* Espacio interno generoso */
+    border-radius: 28px;
+    max-width: 480px;                      /* Ancho ideal para desktop y móvil */
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;                /* Elementos uno sobre otro */
+    align-items: center;                   /* Centra los elementos dentro de la tarjeta */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); /* Sombra para profundidad */
+}
+
+/* 3. El botón: Centrado y con aire para respirar */
+.btn-principal {
+    margin-top: 35px;        /* Lo separa del párrafo para que destaque */
+    width: fit-content;      /* Evita que se estire a lo ancho */
+    padding: 15px 40px;      /* Un poco más grande para ser más 'clickable' */
+    /* ... aquí mantienes tus estilos de degradado y bordes ... */
+}
+
+/* 4. Título y párrafo para mejor lectura */
+.intro-title {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.intro-sub {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}

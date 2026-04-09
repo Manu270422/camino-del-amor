@@ -1,15 +1,27 @@
 [build]
   command = "npm install"
   publish = "."
+  functions = "netlify/functions"
 
 [functions]
+  # Quitamos el node_bundle = true que dio error
+  # Netlify ahora detecta automáticamente si debe buildear con esbuild
   directory = "netlify/functions"
 
+# Si necesitamos externalizar módulos, se hace así, pero por ahora dejamos vacio
 [functions.node_bundle]
   external_node_modules = []
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
 
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"

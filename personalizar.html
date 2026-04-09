@@ -81,6 +81,8 @@
       </div>
 
       <div class="finish-zone">
+        <div id="status-msg" style="margin-bottom: 10px; font-size: 0.9em; min-height: 1.2em;"></div>
+        
         <button class="btn-finish" id="btn-publish" onclick="publishStory()">
           <span>Publicar carta</span>
           <div class="spinner"></div>
@@ -93,5 +95,106 @@
   <div id="toast" class="toast"></div>
 
   <script src="js/personalizar.js"></script>
+
+  <script type="module">
+    import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, doc,
+             setDoc, getDoc,
+             collection }       from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { getAuth,
+             onAuthStateChanged,
+             GoogleAuthProvider,
+             signInWithPopup,
+             signOut }          from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey:            "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
+      authDomain:        "caminodelamor-270422.firebaseapp.com",
+      projectId:         "caminodelamor-270422",
+      storageBucket:     "caminodelamor-270422.firebasestorage.app",
+      messagingSenderId: "382407116447",
+      appId:             "1:382407116447:web:0b8eb1f283fde40f1644aa"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    window.db                 = db;
+    window.auth               = auth;
+    window.GoogleAuthProvider = GoogleAuthProvider;
+    window.signInWithPopup    = signInWithPopup;
+    window.signOut            = signOut;
+    window.doc                = doc;
+    window.getDoc             = getDoc;
+    window.setDoc             = setDoc;
+    window.collection         = collection;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (window.verificarMembresia) await window.verificarMembresia(user);
+    });
+
+    console.log("✅ Firebase activo en personalizar.html");
+  </script>
+
+  <script src="js/payment.js"></script>
+
+  <script>
+    window.publishStory = async function() {
+      const btn = document.getElementById('btn-publish');
+      const status = document.getElementById('status-msg');
+
+      const chapters = (typeof window.getChapters === 'function')
+        ? window.getChapters()
+        : [];
+
+      const storyData = {
+        recipientName: document.getElementById('target-name')?.value.trim() || '',
+        senderName:     window.currentUser?.displayName || 'Anónimo',
+        occasion:       'amor',
+        message:        chapters.map(ch => ch.body).join('\n\n') || '',
+        song:           document.getElementById('music-url')?.value.trim() || '',
+        photoUrl:       chapters[0]?.img || '',
+        chapters:       chapters,
+      };
+
+      if (!storyData.recipientName) {
+        alert('Escribe el nombre de esa persona especial 💌');
+        return;
+      }
+
+      if (!storyData.message) {
+        alert('Agrega al menos un capítulo con texto 📝');
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Publicando...';
+        btn.querySelector('.spinner').style.display = 'inline-block';
+      }
+
+      try {
+        if (window.generarCarta) {
+          await window.generarCarta(storyData);
+        } else {
+          alert('Error: payment.js no se cargó correctamente.');
+          if (btn) {
+            btn.disabled = false;
+            btn.querySelector('span').textContent = 'Publicar carta';
+            btn.querySelector('.spinner').style.display = 'none';
+          }
+        }
+      } catch (err) {
+        console.error('Error en publishStory:', err);
+        if (btn) {
+          btn.disabled = false;
+          btn.querySelector('span').textContent = 'Publicar carta';
+          btn.querySelector('.spinner').style.display = 'none';
+        }
+      }
+    };
+  </script>
+
 </body>
 </html>

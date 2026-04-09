@@ -79,7 +79,7 @@
         </div>
 
         <div class="carta-firma">
-          <p class="carta-firma-texto" id="carta-firma-texto"></p>
+          <p class="confirm-texto" id="carta-firma-texto"></p>
           <p class="carta-firma-label">Con todo mi amor</p>
         </div>
       </div>
@@ -120,6 +120,34 @@
 
   <div class="toast" id="toast"></div>
 
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
+        authDomain: "caminodelamor-270422.firebaseapp.com",
+        projectId: "caminodelamor-270422",
+        storageBucket: "caminodelamor-270422.firebasestorage.app",
+        messagingSenderId: "382407116447",
+        appId: "1:382407116447:web:0b8eb1f283fde40f1644aa"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Exportamos a window para que carta.js vea estos objetos
+    window.db = db;
+    window.auth = auth;
+    window.doc = doc;
+    window.getDoc = getDoc;
+    
+    console.log("✅ Firebase Puente activo en carta.html");
+  </script>
+
   <script src="js/carta.js"></script>
+
 </body>
 </html>
