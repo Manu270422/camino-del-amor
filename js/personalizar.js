@@ -1,49 +1,103 @@
-// personalizar.js - Versión Actualizada
+/* =========================================================
+   CAMINO DEL AMOR - PERSONALIZAR (LÓGICA PRO)
+   Aquí controlo toda la experiencia del usuario y el autoguardado
+========================================================= */
 
-// Configuración de Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
-  authDomain: "caminodelamor-270422.firebaseapp.com",
-  projectId: "caminodelamor-270422",
-  storageBucket: "caminodelamor-270422.firebasestorage.app",
-  messagingSenderId: "382407116447",
-  appId: "1:382407116447:web:0b8eb1f283fde40f1644aa"
-};
+// 🧠 ESTADO GLOBAL (¡Ahora con memoria de elefante!)
+// Primero intento recuperar mis capítulos guardados en el navegador. 
+// Si no hay nada (es la primera vez), creo un capítulo por defecto.
+let chapters = JSON.parse(localStorage.getItem('cda_chapters')) || [
+  { id: Date.now(), title: 'Mi primer capítulo', body: '', img: '', videoUrl: '' }
+];
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+// Intento recordar en qué capítulo estaba trabajando. Si no, uso el primero.
+let activeChapterId = parseInt(localStorage.getItem('cda_active_chapter')) || chapters[0].id;
+
+// Validación de seguridad por si acaso se borró el capítulo activo
+if (!chapters.find(c => c.id === activeChapterId)) {
+    activeChapterId = chapters[0].id;
 }
 
-const db = firebase.firestore();
-const auth = firebase.auth();
+let db, auth; // Variables globales de Firebase que se llenan al cargar
 
-// Estado de la aplicación
-let chapters = [
-  { id: Date.now(), title: 'Mi primer capítulo', body: '', imgUrl: '', videoUrl: '' }
-];
-let activeChapterId = chapters[0].id;
+/* =========================================================
+   💾 MAGIA DE AUTOGUARDADO (Anti-desastres)
+========================================================= */
+// Esta es mi función salvavidas. La llamo cada vez que el usuario hace un cambio.
+function salvarProgresoLocal() {
+    localStorage.setItem('cda_chapters', JSON.stringify(chapters));
+    localStorage.setItem('cda_active_chapter', activeChapterId);
+    console.log("💾 Autoguardado: Capítulos a salvo bro.");
+}
 
-// ── Inicialización ────────────────────────────────────────────────
+/* =========================================================
+   🚀 INICIALIZACIÓN
+========================================================= */
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. Inicializar Firebase solo cuando el DOM esté listo
+  initFirebase();
+
+  // 2. Renderizar UI (ahora cargará lo que tenga en localStorage)
   renderChapterList();
+  
+  // 3. Cargar el capítulo activo de inmediato en lugar de mostrar vacío
   loadChapter(activeChapterId);
 
-  // Auto-guardado al escribir
-  const fields = ['chapter-title', 'chapter-body', 'chapter-img', 'chapter-video'];
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('input', updateCurrentChapterData);
-  });
+  // 4. Bind de eventos
+  bindInputs();
+
+  // ✨ Live preview en tiempo real
+  const bodyInput = document.getElementById('chapter-body');
+  if (bodyInput) {
+    bodyInput.addEventListener('input', updateLivePreview);
+  }
 });
 
-// ── Lógica de Capítulos ───────────────────────────────────────────
+function initFirebase() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
+    authDomain: "caminodelamor-270422.firebaseapp.com",
+    projectId: "caminodelamor-270422",
+    storageBucket: "caminodelamor-270422.firebasestorage.app",
+    messagingSenderId: "382407116447",
+    appId: "1:382407116447:web:0b8eb1f283fde40f1644aa"
+  };
+
+  // Solo inicializar si no existe
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  
+  db = firebase.firestore();
+  auth = firebase.auth();
+  console.log("[CDA] Firebase inicializado correctamente");
+}
+
+/* =========================================================
+   🎯 BIND DE INPUTS
+========================================================= */
+function bindInputs() {
+  const ids = ['chapter-title', 'chapter-body', 'chapter-video'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', updateCurrentChapterData);
+      el.addEventListener('change', updateCurrentChapterData);
+    }
+  });
+}
+
+/* =========================================================
+   📚 CAPÍTULOS
+========================================================= */
 function renderChapterList() {
   const container = document.getElementById('chapter-list');
   if (!container) return;
-  container.innerHTML = '';
 
+  container.innerHTML = '';
   chapters.forEach((ch, index) => {
     const el = document.createElement('div');
+    // Le pongo la clase 'active' si es el capítulo que estoy editando
     el.className = `chapter-item ${ch.id === activeChapterId ? 'active' : ''}`;
     el.textContent = `${index + 1}. ${ch.title || 'Sin título'}`;
     el.onclick = () => selectChapter(ch.id);
@@ -55,34 +109,44 @@ function selectChapter(id) {
   activeChapterId = id;
   renderChapterList();
   loadChapter(id);
+  salvarProgresoLocal(); // Guardo que cambié de pestaña/capítulo
 }
 
 function loadChapter(id) {
   const ch = chapters.find(c => c.id === id);
   if (!ch) return;
 
-  const emptyView = document.getElementById('editor-empty');
-  const contentView = document.getElementById('editor-content');
+  // Mostramos el editor y ocultamos el estado vacío
+  const emptyState = document.getElementById('editor-empty');
+  const contentState = document.getElementById('editor-content');
   
-  if(emptyView) emptyView.style.display = 'none';
-  if(contentView) contentView.style.display = 'block';
+  if(emptyState) emptyState.style.display = 'none';
+  if(contentState) contentState.style.display = 'block';
 
-  document.getElementById('chapter-title').value = ch.title;
-  document.getElementById('chapter-body').value = ch.body;
-  document.getElementById('chapter-img').value = ch.imgUrl;
-  document.getElementById('chapter-video').value = ch.videoUrl || '';
+  // Lleno los campos con los datos de este capítulo
+  const titleInput = document.getElementById('chapter-title');
+  const bodyInput = document.getElementById('chapter-body');
+  const videoInput = document.getElementById('chapter-video');
+
+  if(titleInput) titleInput.value = ch.title || '';
+  if(bodyInput) bodyInput.value = ch.body || '';
+  if(videoInput) videoInput.value = ch.videoUrl || '';
+
+  updateLivePreview();
+  updateImagePreview(ch.img);
 }
 
 function updateCurrentChapterData() {
   const ch = chapters.find(c => c.id === activeChapterId);
   if (!ch) return;
 
-  ch.title = document.getElementById('chapter-title').value;
-  ch.body = document.getElementById('chapter-body').value;
-  ch.imgUrl = document.getElementById('chapter-img').value;
-  ch.videoUrl = document.getElementById('chapter-video').value;
-
-  renderChapterList();
+  // Tomo lo que el usuario escribió y lo guardo en mi objeto
+  ch.title = document.getElementById('chapter-title')?.value || '';
+  ch.body = document.getElementById('chapter-body')?.value || '';
+  ch.videoUrl = document.getElementById('chapter-video')?.value || '';
+  
+  renderChapterList(); // Actualizo el nombre en la barra lateral
+  salvarProgresoLocal(); // ¡Guardo en el navegador inmediatamente!
 }
 
 function addChapter() {
@@ -90,90 +154,98 @@ function addChapter() {
     id: Date.now(),
     title: 'Nuevo capítulo',
     body: '',
-    imgUrl: '',
+    img: '',
     videoUrl: ''
   };
+
   chapters.push(newCh);
   activeChapterId = newCh.id;
+
   renderChapterList();
   loadChapter(activeChapterId);
+  salvarProgresoLocal(); // Guardo el nuevo capítulo creado
+
+  // Micro-interacción: Scroll suave hacia el nuevo capítulo
+  setTimeout(() => {
+    const items = document.querySelectorAll('.chapter-item');
+    items[items.length - 1]?.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
 }
 
 function deleteCurrentChapter() {
   if (chapters.length <= 1) {
-    showToast('Debes tener al menos un capítulo', 'error');
+    alert("Debe haber al menos un capítulo 💌");
     return;
   }
+  
+  // Filtro la lista para quitar el capítulo actual
   chapters = chapters.filter(c => c.id !== activeChapterId);
+  // Selecciono el primer capítulo que quede como activo
   activeChapterId = chapters[0].id;
+  
   renderChapterList();
   loadChapter(activeChapterId);
+  salvarProgresoLocal(); // Guardo después de borrar
 }
 
-// ── Publicación ───────────────────────────────────────────────────
-async function publishStory() {
-  const user = auth.currentUser;
-  if (!user) {
-    showToast('Inicia sesión para guardar tu carta', 'error');
-    return;
+/* =========================================================
+   👁️ LIVE PREVIEW
+========================================================= */
+function updateLivePreview() {
+  const preview = document.getElementById('live-preview');
+  const text = document.getElementById('chapter-body')?.value || '';
+  if (preview) {
+    preview.innerText = text || "Aquí se verá tu texto en tiempo real...";
   }
+}
 
-  const btn = document.getElementById('btn-publish');
-  const targetName = document.getElementById('target-name').value.trim();
-  const musicUrl = document.getElementById('music-url').value.trim();
+/* =========================================================
+   📸 IMÁGENES
+========================================================= */
+const fileUploader = document.getElementById('file-uploader');
+if (fileUploader) {
+    fileUploader.addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
 
-  if (!targetName) {
-    showToast('Dinos para quién es la carta', 'error');
-    return;
-  }
-
-  try {
-    btn.disabled = true;
-    btn.classList.add('loading');
-
-    const idToken = await user.getIdToken();
-
-    const storyData = {
-      target: targetName,
-      song: musicUrl,
-      photoUrl: chapters[0].imgUrl || '',
-      chapters: window.getChapters(),
-    };
-
-    const res = await fetch('/.netlify/functions/save-letter', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      },
-      body: JSON.stringify({ storyData }),
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const ch = chapters.find(c => c.id === activeChapterId);
+        if (ch) {
+          ch.img = e.target.result; // Guardo la imagen en base64
+          updateImagePreview(ch.img);
+          salvarProgresoLocal(); // ¡Guardo la imagen en el navegador!
+        }
+      };
+      reader.readAsDataURL(file);
     });
+}
 
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+function updateImagePreview(url) {
+  const previewDiv = document.getElementById('image-preview');
+  if (!previewDiv) return;
 
-    const { letterId } = await res.json();
-    sessionStorage.setItem('cda_last_letter', letterId);
-    window.location.href = 'carta.html?id=' + letterId + '&nueva=1';
-
-  } catch (err) {
-    console.error('Error publicando:', err);
-    showToast('Hubo un error al publicar. Reintenta.', 'error');
-    btn.disabled = false;
-    btn.classList.remove('loading');
+  previewDiv.innerHTML = '';
+  if (url) {
+    // Si hay foto, renderizo la tarjetita pro
+    previewDiv.innerHTML = `
+      <div class="img-preview-card">
+        <img src="${url}" />
+        <button class="remove-img" type="button">✖</button>
+      </div>
+    `;
+    
+    // Le doy vida al botón de borrar imagen
+    previewDiv.querySelector('.remove-img').onclick = () => {
+      const ch = chapters.find(c => c.id === activeChapterId);
+      if (ch) {
+        ch.img = ''; // Borro la ruta
+        updateImagePreview(''); // Limpio el visual
+        salvarProgresoLocal(); // Guardo que ya no hay foto
+      }
+    };
   }
 }
 
-// ── Toast ─────────────────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, tipo = '') {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.className = `toast show ${tipo}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// ── EXPOSICIÓN GLOBAL PARA OTROS SCRIPTS ──────────────────────────
-// Exponemos los capítulos para que el botón de publicar pueda leerlos desde el HTML
+// Exportar datos (útil para cuando enviemos todo a Firebase)
 window.getChapters = () => chapters;

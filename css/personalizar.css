@@ -1,5 +1,12 @@
+/* =========================================================
+   CAMINO DEL AMOR - PERSONALIZAR (UX/UI PRO)
+   Diseño pensado como producto real (no formulario)
+========================================================= */
+
+/* 🔧 Reset base */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* 🎨 Variables globales */
 :root {
   --cream:    #faf7f2;
   --ink:      #1a1612;
@@ -12,6 +19,7 @@
   --shadow:   0 4px 20px rgba(0,0,0,0.03);
 }
 
+/* 🌍 Base */
 body {
   background: var(--cream);
   color: var(--ink);
@@ -22,25 +30,38 @@ body {
   overflow: hidden;
 }
 
-/* ── Header ─────────────────────────────────────────────────── */
+/* =========================================
+   1. DOMANDO EL LOGO Y EL HEADER (Modo SaaS Premium)
+   ========================================= */
 .header {
-  height: 70px;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    height: 70px; /* Fija la altura para que no empuje lo de abajo */
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
 }
 
-.logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.2rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-decoration: none;
-  color: var(--ink);
+/* El contenedor del enlace para que quede bien alineado */
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+/* ¡Aquí domamos al logo definitivo! Minimalista y en la esquina */
+.header-logo {
+    max-height: 40px; /* Altura máxima estricta. ¡No más Godzilla! */
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.2s ease; /* Preparando el terreno para la animación */
+}
+
+/* Un toque de elegancia: crece un poquito al pasar el mouse */
+.header-logo:hover {
+    transform: scale(1.05);
 }
 
 .btn-outline {
@@ -54,33 +75,65 @@ body {
 }
 .btn-outline:hover { background: var(--cream); }
 
-/* ── Layout ─────────────────────────────────────────────────── */
-.main-container {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  overflow: hidden;
-}
-
-/* ── Sidebar (Capítulos) ─────────────────────────────────────── */
-.sidebar {
-  background: var(--white);
-  border-right: 1px solid var(--border);
+/* =========================================================
+   🔥 STEPPER (flujo UX)
+========================================================= */
+.stepper {
   display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
+  justify-content: space-between;
+  padding: 15px 30px;
+  background: rgba(255,255,255,0.6);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
 }
 
-.sidebar-top { margin-bottom: 1.5rem; }
-.sidebar-title { font-size: 1rem; font-weight: 500; }
+.step {
+  font-size: 0.75rem;
+  opacity: 0.4;
+  transition: all 0.3s;
+}
+
+.step.active {
+  opacity: 1;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* =========================================
+   2. LAYOUT DE 3 COLUMNAS (PC) - SCROLL INDEPENDIENTE
+   ========================================= */
+.main-container {
+    display: flex;
+    /* La altura total de la pantalla MENOS el header y el stepper */
+    height: calc(100vh - 130px); 
+    overflow: hidden; /* Evita el scroll general de la página */
+    background-color: var(--cream);
+}
+
+/* =========================================================
+   📚 SIDEBAR (Capítulos) - Columna Izquierda
+========================================================= */
+.sidebar {
+    width: 250px;
+    min-width: 250px;
+    overflow-y: auto; /* Scroll solo si hay muchos capítulos */
+    padding: 20px;
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-title { font-size: 1rem; }
 .sidebar-desc { font-size: 0.8rem; color: var(--muted); }
 
 .chapter-list {
   flex: 1;
   overflow-y: auto;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
 }
 
+/* 🔥 UX: capítulos tipo app moderna */
 .chapter-item {
   padding: 0.8rem 1rem;
   border-radius: 10px;
@@ -88,19 +141,20 @@ body {
   margin-bottom: 0.6rem;
   cursor: pointer;
   font-size: 0.9rem;
-  border: 1px solid transparent;
-  transition: all 0.2s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  transition: all 0.25s;
 }
 
-.chapter-item:hover { border-color: var(--gold); }
+.chapter-item:hover {
+  background: var(--accent-l);
+  transform: translateX(3px);
+}
+
 .chapter-item.active {
   background: var(--accent);
-  color: var(--white);
+  color: white;
 }
 
+/* ➕ botón */
 .btn-add-chapter {
   width: 100%;
   padding: 0.8rem;
@@ -108,20 +162,18 @@ body {
   color: var(--accent);
   border: none;
   border-radius: 10px;
-  font-weight: 500;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
 }
 
-/* ── Editor ─────────────────────────────────────────────────── */
+/* =========================================================
+   ✍️ EDITOR - Columna Central
+========================================================= */
 .editor-area {
-  padding: 3rem;
-  overflow-y: auto;
-  display: flex;
-  justify-content: center;
+    flex-grow: 1; /* Toma todo el espacio disponible en el centro */
+    overflow-y: auto; /* Scroll propio para la carta */
+    padding: 30px;
+    display: flex;
+    justify-content: center;
 }
 
 .editor-content {
@@ -129,34 +181,53 @@ body {
   width: 100%;
 }
 
+/* estado vacío */
 .editor-empty {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--muted);
   font-style: italic;
+  width: 100%;
 }
 
+/* 🆕 ESTADO VACÍO (UX EMOCIONAL) */
+.empty-state {
+  text-align: center;
+  opacity: 0.7;
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.empty-state span {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  color: var(--muted);
+}
+
+/* header del capítulo */
 .editor-header {
   display: flex;
-  align-items: center;
   gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .input-title {
   flex: 1;
-  background: transparent;
   border: none;
+  background: transparent;
   font-family: 'Cormorant Garamond', serif;
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   outline: none;
-  color: var(--ink);
 }
 
+/* eliminar */
 .btn-delete {
   background: var(--accent-l);
-  color: var(--accent);
   border: none;
   width: 40px;
   height: 40px;
@@ -164,55 +235,103 @@ body {
   cursor: pointer;
 }
 
+/* campos */
 .field-group { margin-bottom: 1.5rem; }
+
 .label {
-  display: block;
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--muted);
   margin-bottom: 0.5rem;
-  font-weight: 500;
+  display: block;
 }
 
 .input-text, .input-textarea {
   width: 100%;
-  background: var(--white);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 0.8rem 1rem;
-  font-family: inherit;
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s;
+  padding: 0.8rem;
 }
 
 .input-textarea {
-  height: 300px;
-  resize: none;
-  line-height: 1.6;
+  height: 250px;
+  resize: vertical;
 }
 
-.input-text:focus, .input-textarea:focus { border-color: var(--gold); }
-
-.media-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+/* ✨ LIVE PREVIEW */
+.live-preview {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.03);
+  font-size: 0.9rem;
+  opacity: 0.8;
+  transition: all 0.3s;
 }
 
-/* ── Config Bar ─────────────────────────────────────────────── */
+/* =========================================================
+   ⚙️ CONFIG BAR - Columna Derecha
+========================================================= */
 .config-bar {
-  background: var(--white);
-  border-left: 1px solid var(--border);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
+    width: 300px;
+    min-width: 300px;
+    overflow-y: auto; /* Scroll propio para los ajustes */
+    padding: 20px;
+    background: var(--white);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
 }
 
-.config-title { font-size: 1rem; margin-bottom: 1.5rem; }
+.config-title { margin-bottom: 1.5rem; }
 
-/* ESTILO DEL MENSAJE DE ESTADO (TOQUE PRO) */
+/* 👁️ botón preview */
+.btn-upload {
+  margin: 10px 0;
+  padding: 0.8rem;
+  background: var(--gold);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* 📸 Imagen preview PRO */
+.img-preview-card {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.img-preview-card img {
+  max-width: 220px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.remove-img {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #000;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* =========================================================
+   🚀 PUBLICAR
+========================================================= */
+.finish-zone {
+  margin-top: auto;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Estilo para el mensaje de estado cuando se está publicando */
 #status-msg {
     transition: all 0.3s ease;
     text-align: center;
@@ -221,55 +340,58 @@ body {
     color: var(--muted);
 }
 
-.finish-zone {
-  margin-top: auto;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border);
-}
-
 .btn-finish {
   width: 100%;
   padding: 1.2rem;
   background: var(--ink);
-  color: var(--white);
-  border: none;
+  color: white;
   border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 500;
   cursor: pointer;
   position: relative;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
+/* spinner */
 .btn-finish.loading span { opacity: 0; }
 .spinner {
   display: none;
-  width: 20px; height: 20px;
+  width: 20px;
+  height: 20px;
   border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
+  border-top: white;
   border-radius: 50%;
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   margin: -10px 0 0 -10px;
-  animation: spin 0.8s linear infinite;
+  animation: spin 1s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 .btn-finish.loading .spinner { display: block; }
 
 .finish-note {
-  font-size: 0.75rem;
-  color: var(--muted);
   text-align: center;
-  margin-top: 1rem;
+  font-size: 0.75rem;
+  margin-top: 10px;
+  color: var(--muted);
 }
 
-/* ── Toast ──────────────────────────────────────────────────── */
+/* =========================================================
+   🔔 TOAST
+========================================================= */
 .toast {
   position: fixed;
-  bottom: 2rem; left: 50%;
+  bottom: 2rem;
+  left: 50%;
   transform: translateX(-50%) translateY(100px);
   background: var(--ink);
-  color: var(--white);
-  padding: 0.8rem 1.5rem;
+  color: white;
+  padding: 10px 20px;
   border-radius: 50px;
   font-size: 0.9rem;
   transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
@@ -278,8 +400,36 @@ body {
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.error { background: var(--accent); }
 
-@media (max-width: 1100px) {
-  .main-container { grid-template-columns: 1fr; overflow-y: auto; }
-  .sidebar, .config-bar { height: auto; border: none; }
-  .editor-area { padding: 1.5rem; }
+/* =========================================
+   3. MODO RESPONSIVE (Móviles y Tablets)
+   ========================================= */
+@media (max-width: 992px) {
+    .main-container {
+        flex-direction: column; /* Apila todo en una columna vertical */
+        height: auto; /* Libera la altura */
+        overflow: visible; /* Devuelve el scroll general a la página */
+    }
+
+    .sidebar, .config-bar {
+        width: 100%;
+        min-width: 100%;
+        border: none;
+        border-bottom: 1px solid var(--border);
+        height: auto;
+    }
+
+    .editor-area {
+        padding: 15px; /* Menos espacio a los lados en celular */
+    }
+
+    /* Hace que el botón de publicar flote abajo en celulares */
+    .finish-zone {
+        position: sticky;
+        bottom: 0;
+        background: var(--white);
+        padding: 15px;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+        z-index: 100;
+        border-top: none;
+    }
 }

@@ -1,15 +1,18 @@
-// js/script.js
+// js/script.js - Motor principal del sitio "Camino del Amor" 🚀
+// (Comentado paso a paso para entender mi propio código como un Pro)
 
 // ============================================================================
-// 1. ESTADO GLOBAL Y CONFIGURACIÓN
+// 1. ESTADO GLOBAL Y CONFIGURACIÓN (El cerebro de mi app)
 // ============================================================================
-let currentUser = null; 
-let userProfile = null; 
+let currentUser = null; // Aquí guardo los datos de Google de quien inicie sesión.
+let userProfile = null; // Aquí guardo su perfil de Firebase (para saber si es VIP/miembro).
 
-const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/dbccdt3wq/upload`;
-const UPLOAD_PRESET = 'caminodelamor_preset';
+// Mis credenciales de Cloudinary. ¡Con esto me ahorro pagar almacenamiento en Firebase!
+const CLOUD_NAME = 'dkp66m4p6';
+const UPLOAD_PRESET = 'cartas_preset';
 
-// Estructura UNIFICADA (Nombres modernos para el backend)
+// El "Esqueleto" de mi carta. Cuando alguien entra a personalizar, 
+// empiezo a llenar esta maleta vacía con su información.
 const EMPTY_STORY = {
     senderName: 'Tu nombre',
     recipientName: 'Su nombre',
@@ -17,7 +20,7 @@ const EMPTY_STORY = {
     message: 'Escribe aquí tu mensaje de cierre...',
     occasion: 'amor',
     song: '', 
-    photoUrl: '',
+    photoUrl: '', // Aquí va a parar el link mágico de Cloudinary
     chapters: [
         { t: 'Capítulo 1', body: 'Cuenta aquí tu primera historia...', img: '' },
         { t: 'Capítulo 2', body: 'Continúa tu relato...', img: '' },
@@ -25,31 +28,38 @@ const EMPTY_STORY = {
     ]
 };
 
-let C = JSON.parse(JSON.stringify(EMPTY_STORY));
+// 'C' es mi carta actual. Hago un clon de EMPTY_STORY para no dañar el original.
+let C = JSON.parse(JSON.stringify(EMPTY_STORY)); 
 let firstTime = true; 
 let currentCh = 0;
 let isPlaying = false;
 const audio = document.getElementById('bgAudio');
 
 // ============================================================================
-// 2. LÓGICA DE AUTENTICACIÓN
+// 2. LÓGICA DE AUTENTICACIÓN (El cadenero de mi discoteca)
 // ============================================================================
+
+// Esta función la llama Firebase cuando alguien entra a la página o se loguea.
 window.verificarMembresia = async (user) => {
     if (user) {
+        // ¡Tenemos usuario! Guardo sus datos y verifico si ya me compró antes.
         currentUser = user;
-        window.currentUser = user; // Sincronización para payment.js
+        window.currentUser = user; 
         await cargarPerfil(user);
         console.log("✅ Usuario autenticado:", user.email);
+        
+        // Le muestro el diseño de "miembro" o "no-miembro" según su perfil.
         mostrarEstado(userProfile?.hasMembership ? 'member' : 'no-member', user);
     } else {
+        // No hay nadie. Borro todo y lo trato como invitado (guest).
         currentUser = null;
         userProfile = null;
         window.currentUser = null;
-        console.log("❌ Usuario desconectado");
         mostrarEstado('guest', null);
     }
 };
 
+// Va a Firebase y pregunta: "¿Este man (uid) ya pagó la membresía?"
 async function cargarPerfil(user) {
     try {
         const docRef = window.doc(window.db, "users", user.uid);
@@ -61,25 +71,30 @@ async function cargarPerfil(user) {
     }
 }
 
+// Lanza la ventanita emergente de Google para iniciar sesión.
 window.loginConGoogle = async function() {
     try {
         const provider = new window.GoogleAuthProvider();
         return await window.signInWithPopup(window.auth, provider);
     } catch (err) {
         console.error('Error en login:', err);
-        if (window.mostrarToast) window.mostrarToast('Error al iniciar sesión.', 'error');
     }
 };
 
 // ============================================================================
-// 3. UI Y RENDERIZADO
+// 3. UI Y RENDERIZADO (El maquillador de mi página)
 // ============================================================================
+
+// Cambia la barra de navegación dependiendo de si el usuario es invitado o miembro.
 function mostrarEstado(estado, user) {
+    // Primero apago todos los estados...
     document.querySelectorAll('.auth-state').forEach(el => el.classList.remove('active'));
+    // ...y enciendo solo el que necesito.
     const ids = { guest: 'state-guest', 'no-member': 'state-no-member', member: 'state-member' };
     const targetEl = document.getElementById(ids[estado]);
     if (targetEl) targetEl.classList.add('active');
 
+    // Si está logueado, le pongo su nombre y su foto de Google arriba a la derecha.
     if (user && (estado === 'no-member' || estado === 'member')) {
         const suffix = estado === 'member' ? 'm' : 'nm';
         const nameEl = document.getElementById(`name-${suffix}`);
@@ -88,6 +103,7 @@ function mostrarEstado(estado, user) {
     }
 }
 
+// Pinta el circulito con la foto de perfil del usuario.
 function _setAvatar(id, url, name) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -95,6 +111,7 @@ function _setAvatar(id, url, name) {
     else el.textContent = name ? name[0].toUpperCase() : '?';
 }
 
+// Toma los datos de mi variable 'C' (la carta) y los dibuja en el HTML (cuando uso el visor).
 function applyConfigUI() {
     const elements = {
         fDate: C.date,
@@ -104,7 +121,6 @@ function applyConfigUI() {
         fTitle: `Te sigo eligiendo, ${C.recipientName || C.to || ''}`,
         fMsg: C.message || C.msg || ''
     };
-
     for (let id in elements) {
         const el = document.getElementById(id);
         if (el) el.textContent = elements[id];
@@ -112,14 +128,19 @@ function applyConfigUI() {
 }
 
 // ============================================================================
-// 4. FLUJO DE PUBLICACIÓN
+// 4. FLUJO DE PUBLICACIÓN (Cuando el cliente le da al botón final)
 // ============================================================================
-
 window.iniciarProcesoPago = async function() {
+    // 1. Recojo lo que escribió en los inputs y lo meto en 'C'
     C.senderName = document.getElementById('edFrom')?.value.trim();
     C.recipientName = document.getElementById('edTo')?.value.trim();
     C.message = document.getElementById('edMsg')?.value.trim();
 
+    // 2. ¡OJO AQUÍ! Capturo el link de la foto de Cloudinary que estaba oculto
+    const fotoCargada = document.getElementById('photoUrl')?.value;
+    if(fotoCargada) C.photoUrl = fotoCargada;
+
+    // 3. Recojo los capítulos
     C.chapters.forEach((_, i) => {
         const titleEl = document.getElementById(`edCapT${i}`);
         const bodyEl = document.getElementById(`edCapB${i}`);
@@ -127,130 +148,114 @@ window.iniciarProcesoPago = async function() {
         if(bodyEl) C.chapters[i].body = bodyEl.value;
     });
 
+    // 4. Si dejó cosas vacías, lo regaño.
     if(!C.senderName || !C.recipientName || !C.message) {
-        alert("Completa los nombres y el mensaje final 💌");
+        alert("Completa los campos necesarios 💌");
         return;
     }
-
+    // 5. Si no está logueado, lo obligo a iniciar sesión antes de pagar.
     if (!currentUser) {
-        alert("Inicia sesión para guardar tu historia ✨");
+        alert("Inicia sesión para continuar ✨");
         await window.loginConGoogle();
         return; 
     }
-
-    if(window.generarCarta) {
-        await window.generarCarta(C); 
-    } else {
-        alert("Error: payment.js no cargado.");
-    }
+    
+    // 6. Si todo está en orden, ¡Mando los datos a payment.js para cobrar/guardar!
+    if(window.generarCarta) await window.generarCarta(C); 
 }
 
 // ============================================================================
-// 5. EVENTOS DE CARGA Y LÓGICA DE LANDING (CORREGIDO)
+// 5. EVENTOS Y LÓGICA DE CARGA BLINDADA (Mi escudo anti-errores)
 // ============================================================================
-
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     
-    // Configuración del Formulario del Dashboard
-    const form = document.querySelector('.letter-form');
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const storyData = {
-                recipientName: document.getElementById('recipient').value.trim(),
-                senderName:    document.getElementById('sender').value.trim(),
-                occasion:      document.getElementById('occasion').value,
-                message:       document.getElementById('message').value.trim(),
-                song:          document.getElementById('song')?.value.trim() || '',
-                photoUrl:      document.getElementById('photo-url')?.value.trim() || '',
-            };
+    // 1. PAUSA: No dejo que pase nada hasta que Firebase no haya cargado por completo.
+    const checkFirebase = () => new Promise((resolve) => {
+        const interval = setInterval(() => {
+            if (window.auth && window.db) {
+                clearInterval(interval);
+                resolve();
+            }
+        }, 50);
+    });
+    
+    await checkFirebase();
 
-            if(window.generarCarta) await window.generarCarta(storyData);
-        });
+    // 2. SPLASH SCREEN: Mi cortina negra de "El Mundo de Manu" tipo Garena.
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+        // Le doy 2 segundos para que el cliente vea mi logo...
+        setTimeout(() => {
+            splash.style.opacity = '0'; // Lo desvanezco suavemente
+            setTimeout(() => {
+                splash.style.display = 'none'; // Lo quito del camino para que puedan usar la app
+                sessionStorage.setItem('splashMostrado', 'true');
+            }, 500);
+        }, 2000);
     }
 
-    // Botón Publicar
-    const btnPublicarExt = document.getElementById('btn-publicar');
-    if (btnPublicarExt) btnPublicarExt.addEventListener('click', window.iniciarProcesoPago);
+    // 3. MOTOR CLOUDINARY: El encargado de subir las fotos.
+    const fileUploader = document.getElementById('file-uploader');
+    if (fileUploader) {
+        fileUploader.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return; // Si cancela la subida, no hago nada.
+            
+            const statusMsg = document.getElementById('upload-status');
+            if(statusMsg) statusMsg.innerText = "⏳ Subiendo...";
+            
+            // Empaqueto la foto con mi sello (preset) para mandarla a la nube
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', UPLOAD_PRESET);
+
+            try {
+                // Hago la llamada a la API de Cloudinary
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (data.secure_url) {
+                    // ¡Éxito! Me devolvieron el link. Lo guardo y aviso que está listo.
+                    if(statusMsg) statusMsg.innerText = "✅ ¡Foto lista!";
+                    document.getElementById('photoUrl').value = data.secure_url;
+                    C.photoUrl = data.secure_url; 
+                }
+            } catch (err) {
+                if(statusMsg) statusMsg.innerText = "❌ Error de conexión.";
+            }
+        });
+    }
 });
 
 // ============================================================================
-// 6. NAVEGACIÓN Y LECTOR DE CARTA (EL "SWITCH")
+// 6. NAVEGACIÓN Y LECTOR (El Switch entre crear y leer)
 // ============================================================================
+// Atajo rápido para ir al editor
+window.openEditor = () => window.location.href = 'personalizar.html';
 
-window.openEditor = function() {
-    window.location.href = 'personalizar.html';
-};
-
-/**
- * initCartaReader: Maneja si mostramos la Landing Page o el Visor de Cartas
- */
+// Esta función anónima se ejecuta sola al arrancar.
+// Revisa si en la URL hay un "?id=xxxx". Si lo hay, entra en modo LECTOR DE CARTAS.
 (function initCartaReader() {
-    const params   = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
     const letterId = params.get('id');
     
-    // --- LA SOLUCIÓN AL "BLANCO" ---
+    // Si no hay ID, no hago nada (dejo que el usuario vea la pantalla principal).
+    if (!letterId) return;
 
-        // --- LA SOLUCIÓN AL "BLANCO" ---
-
-    if (!letterId) {
-        console.log("🏠 Modo Landing: No hay ID, mostrando pantalla de bienvenida.");
-        const s1 = document.getElementById('s1');
-
-        // Quitamos 'hidden' de la pantalla de inicio y nos aseguramos que el dashboard sea visible
-
-        if(s1) s1.classList.remove('hidden'); 
-
-        // Si tienes un contenedor principal para el visor, asegúrate que se vea
-
-        const appViewer = document.getElementById('app-viewer');
-        if(appViewer) appViewer.style.display = 'block';
-        return;
-    }
-
-    window.CARTA_ID = letterId;
-
+    // Si hay ID, voy a buscar esa carta a la base de datos (Firestore)
     async function cargarCarta() {
-        if (!window.db || !window.doc || !window.getDoc) {
-            // Reintento pequeño por si Firebase tarda en cargar
-            setTimeout(cargarCarta, 200);
-            return;
-        }
+        // Si Firebase todavía no carga, vuelvo a intentar en 200ms
+        if (!window.db || !window.doc || !window.getDoc) { setTimeout(cargarCarta, 200); return; }
         try {
             const snap = await window.getDoc(window.doc(window.db, 'letters', letterId));
             if (snap.exists()) {
-                window.CARTA_DATA = snap.data();
-                C = snap.data(); // Sincronizamos con el estado global
-                
+                // ¡La encontré! Lleno mi variable 'C' y pinto la carta en pantalla
+                C = snap.data(); 
                 applyConfigUI();
-                
-                // Ocultamos dashboard si existe, mostramos visor
-                if(document.getElementById('landing-dashboard')) 
-                    document.getElementById('landing-dashboard').style.display = 'none';
-                
-                if(document.getElementById('app-viewer')) 
-                    document.getElementById('app-viewer').style.display = 'block';
-                
-                // Disparamos evento por si otros scripts lo necesitan
+                // Aviso a los demás scripts que la carta ya está lista por si necesitan hacer algo
                 document.dispatchEvent(new CustomEvent('cartaLoaded', { detail: snap.data() }));
-                
-                // Forzamos mostrar la primera pantalla de la carta
-                const s1 = document.getElementById('s1');
-                if(s1) s1.classList.remove('hidden');
-
-            } else {
-                console.warn('Carta no encontrada:', letterId);
-                window.location.href = 'index.html'; // Redirigir a landing si el ID no existe
             }
-        } catch (err) {
-            console.error('Error cargando carta:', err);
-        }
+        } catch (err) { console.error(err); }
     }
-
-    // Ejecutar carga con un pequeño delay para asegurar que Firebase (db) esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(cargarCarta, 800));
-    } else {
-        setTimeout(cargarCarta, 800);
-    }
+    cargarCarta();
 })();

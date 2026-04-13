@@ -2,139 +2,290 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+
+    <!-- 📱 Configuración responsive -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
     <title>CaminoDelAmor · El Mundo de Manu</title>
+
+    <!-- 🌐 Open Graph (para cuando compartan el link) -->
     <meta property="og:title" content="Alguien tiene algo importante que decirte 💌">
     <meta property="og:description" content="Abre esto. Por favor.">
-    
+
+    <!-- 🔤 Tipografías elegantes -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
 
+    <!-- 💳 SDK de pagos -->
     <script src="https://sdk.mercadopago.com/js/v2"></script>
+
+    <!-- 🎨 Estilos principales -->
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* 🔥 SPLASH SCREEN (pantalla inicial tipo app profesional) */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
+        }
+
+        .splash-content {
+            text-align: center;
+        }
+
+        .splash-logo {
+            width: 120px;
+            margin-bottom: 25px;
+            animation: fadeIn 1s ease;
+        }
+
+        .loader-bar {
+            width: 160px;
+            height: 3px;
+            background: #222;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .loader-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff4d6d, #ff8fa3);
+            animation: loadBar 2.5s ease forwards;
+        }
+
+        @keyframes loadBar {
+            to { width: 100%; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9);}
+            to { opacity: 1; transform: scale(1);}
+        }
+
+        /* 🚫 Evita que el contenido aparezca antes del splash */
+        #app-viewer {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        /* ✨ NUEVO DISEÑO PROFESIONAL PARA s1 */
+        .intro-bg {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, #1a1a1a, #000);
+            z-index: -1;
+        }
+
+        .intro-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .intro-card {
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            padding: 30px 25px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 0 40px rgba(255, 77, 109, 0.08);
+        }
+
+        .from-tag {
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .intro-title {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        .intro-sub {
+            font-size: 0.95rem;
+            opacity: 0.75;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .btn-principal {
+            padding: 12px 20px;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(90deg, #ff4d6d, #ff8fa3);
+            color: white;
+            font-weight: 500;
+            transition: transform 0.2s ease;
+        }
+
+        .btn-principal:hover {
+            transform: scale(1.05);
+        }
+    </style>
 </head>
+
 <body>
 
+    <!-- 🔥 SPLASH (pantalla de carga tipo app premium) -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <img src="El Mundo de Manu.png" class="splash-logo">
+
+            <!-- Barra de carga animada -->
+            <div class="loader-bar">
+                <div class="loader-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 APP PRINCIPAL -->
     <div id="app-viewer">
+
+        <!-- 🎮 Canvas principal -->
         <canvas id="canvas"></canvas>
+
+        <!-- 📊 Barra de progreso -->
         <div id="prog"><div id="progFill"></div></div>
-        
+
+        <!-- 🎵 Botón música -->
         <button class="musi" id="musicBtn" onclick="toggleMusic()" style="display:none">🎵</button>
+
+        <!-- ✏️ Botón editar -->
         <button class="fab" id="fab" onclick="window.location.href='personalizar.html'" style="display:none">✏️</button>
 
-        <div id="s0" class="screen">
-            <div class="loader-content">
-                <img src="El Mundo de Manu.png" class="brand-logo-img" alt="Logo El Mundo de Manu">
-                <h1 class="brand-name">CAMINO DEL AMOR</h1>
-                <p class="brand-tagline">by El Mundo de Manu</p>
-                <div class="load-track" style="width: 200px; margin: 0 auto;">
-                    <div id="loadFill" class="load-fill"></div>
+        <!-- 🚀 NUEVO s1 PROFESIONAL -->
+        <div class="screen" id="s1">
+
+            <!-- 🌌 Fondo visual -->
+            <div class="intro-bg"></div>
+
+            <!-- 📦 Contenedor centrado -->
+            <div class="intro-container">
+
+                <!-- 💌 Tarjeta principal -->
+                <div class="intro-card">
+
+                    <!-- 👤 Remitente dinámico -->
+                    <p class="from-tag" id="iFrom">💌 De alguien especial...</p>
+
+                    <!-- 🧠 Título principal -->
+                    <h1 class="intro-title" id="iTitle">
+                        Hay algo que necesitas ver...
+                    </h1>
+
+                    <!-- 💭 Mensaje breve -->
+                    <p class="intro-sub">
+                        No es solo un mensaje.  
+                        Es un momento, una emoción… algo que alguien quiso dejarte.
+                    </p>
+
+                    <!-- 👉 Acción principal -->
+                    <button class="btn-principal" onclick="window.location.href='personalizar.html'">
+                        Abrir ahora ✦
+                    </button>
+
                 </div>
-                <p style="font-size: 0.7em; color: #666; margin-top: 15px; letter-spacing: 1px;">CARGANDO EXPERIENCIA...</p>
             </div>
         </div>
 
-        <div class="screen hidden" id="s1">
-            <div class="intro-card">
-                <p class="from-tag" id="iFrom">...</p>
-                <h1 class="intro-title" id="iTitle">Cargando mensaje...</h1>
-                <p class="intro-sub">Esta historia fue escrita con el corazón. Tómate un momento, respira y abre este regalo.</p>
-                <button class="btn-principal" onclick="window.location.href='personalizar.html'">Abrir carta ✦</button>
-            </div>
-        </div>
-
+        <!-- 📖 Historia -->
         <div class="screen hidden" id="s2">
             <div class="ch-wrap" id="chWrap"></div>
         </div>
 
+        <!-- 💝 Final -->
         <div class="screen hidden" id="s3">
             <div class="final-card">
                 <span class="final-heart">💝</span>
                 <p class="final-to" id="fTo">...</p>
                 <h2 class="final-title" id="fTitle">...</h2>
-                <p class="final-msg" id="fMsg">...</p>
+                <p class="final-msg" id="fMsg"></p>
                 <p class="final-msg" id="fDate"></p>
-                <button class="share-btn" id="mainPublishBtn" onclick="iniciarProcesoPago()">Compartir esta historia 💌</button>
+
+                <button class="share-btn" onclick="iniciarProcesoPago()">Compartir esta historia 💌</button>
                 <button class="own-btn" onclick="window.location.href='personalizar.html'">Personalizar la mía ✦</button>
             </div>
         </div>
 
-        <div id="editor" class="screen hidden" style="background: rgba(0,0,0,0.9); overflow-y: auto; position: fixed; top:0; left:0; width:100%; height:100%; z-index: 500;">
-            <button onclick="openHelp()" style="position: absolute; top: 15px; right: 15px; background: #444; border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; z-index: 600; font-weight: bold;">❓</button>
-
-            <div class="ed-sheet">
-                <div class="ed-title">✦ Personalizar Experiencia</div>
-                <div id="status-msg" style="text-align: center; margin-bottom: 10px; font-weight: bold; font-size: 0.9em; color: #ff4d6d;"></div>
-
-                <div class="f-group">
-                    <div class="f-label">Tu nombre (Emisor)</div>
-                    <input class="f-input" id="edFrom" placeholder="Ej: Manu">
-                </div>
-                <div class="f-group">
-                    <div class="f-label">Su nombre (Receptor)</div>
-                    <input class="f-input" id="edTo" placeholder="Ej: María">
-                </div>
-                <div class="f-group">
-                    <div class="f-label" id="musicLabel">Música (.mp3)</div>
-                    <input type="file" id="edMusicFile" accept="audio/*" onchange="handleMusicUpload(event)" style="margin-bottom:10px; color: white;">
-                    <input class="f-input" id="edMusicUrl" placeholder="Link directo .mp3" onchange="C.music = this.value">
-                </div>
-                <div id="chaptersEditor"></div>
-                <div class="f-group">
-                    <div class="f-label">Mensaje de Cierre</div>
-                    <textarea class="f-input" id="edMsg" placeholder="Escribe tus palabras finales..."></textarea>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
-                    <button class="apply-btn" onclick="applyEdit()" style="background: #ff4d6d; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">Vista Previa ✦</button>
-                    <button class="close-btn" onclick="showScreen('s1')" style="background: #444; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">Cancelar</button>
-                </div>
-                
-                <button id="btn-publicar" style="width: 100%; margin-top: 15px; background: #25d366; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">🚀 PUBLICAR Y CREAR LINK</button>
-            </div>
-
-            <div id="helpModal" class="hidden" style="background: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; position: fixed; top:0; left:0; width:100%; height:100%;">
-                <div style="background: #1a1a1a; padding: 30px; border-radius: 20px; max-width: 90%; width: 350px; border: 1px solid #ff4d6d; text-align: center; color: white;">
-                    <h2 style="color: #ff4d6d; margin-bottom: 20px;">✨ Guía Rápida</h2>
-                    <div style="text-align: left; font-size: 0.95em; line-height: 1.6;">
-                        <p><strong>1. Personaliza:</strong> Nombres y mensaje final.</p>
-                        <p><strong>2. Fotos:</strong> Sube una imagen por capítulo.</p>
-                        <p><strong>3. Música:</strong> Sube tu archivo favorito.</p>
-                        <p><strong>4. Publica:</strong> Comparte tu link único.</p>
-                    </div>
-                    <button onclick="closeHelp()" class="close-help-btn">¡Entendido! 💖</button>
-                </div>
-            </div>
-        </div>
-
+        <!-- 🏷️ Marca -->
         <div class="watermark">
             Desarrollado por <strong>El Mundo de Manu</strong>
         </div>
 
-        <audio id="bgAudio" loop><source src="" type="audio/mpeg"></audio>
+        <!-- 🔊 Audio -->
+        <audio id="bgAudio" loop>
+            <source src="" type="audio/mpeg">
+        </audio>
+
+        <!-- 🔔 Notificaciones -->
         <div class="toast" id="toast"></div>
     </div>
 
+    <!-- ⚙️ CONTROL DEL SPLASH -->
+    <script>
+        // 👉 Espera a que cargue todo
+        window.addEventListener("load", () => {
+
+            const splash = document.getElementById("splash-screen");
+            const app = document.getElementById("app-viewer");
+
+            // ⏳ Simula carga tipo app
+            setTimeout(() => {
+
+                splash.style.opacity = "0";
+
+                setTimeout(() => {
+
+                    splash.style.display = "none";
+                    app.style.opacity = "1";
+
+                    // 🚀 Muestra pantalla inicial
+                    if (window.showScreen) {
+                        showScreen('s1');
+                    }
+
+                }, 600);
+
+            }, 2500);
+        });
+    </script>
+
+    <!-- 🔥 FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBGLTxv2ozPcXwLPjrDDL7UilGh7cBTM8w",
+            apiKey: "AIzaSy...",
             authDomain: "caminodelamor-270422.firebaseapp.com",
             projectId: "caminodelamor-270422",
             storageBucket: "caminodelamor-270422.firebasestorage.app",
             messagingSenderId: "382407116447",
-            appId: "1:382407116447:web:0b8eb1f283fde40f1644aa",
-            measurementId: "G-HHBE3ZXNE3"
+            appId: "1:382407116447:web:0b8eb1f283fde40f1644aa"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Global Bridges
+        // 🌍 Hago global Firebase para usarlo en otros scripts
         window.db = db;
         window.auth = auth;
         window.GoogleAuthProvider = GoogleAuthProvider;
@@ -145,16 +296,18 @@
         window.setDoc = setDoc;
         window.collection = collection;
 
+        // 🔐 Verificación de usuario
         onAuthStateChanged(auth, async (user) => {
-            // Ya no buscamos elementos de la landing, solo manejamos el estado interno
             if (window.verificarMembresia) {
                 await window.verificarMembresia(user);
             }
         });
-        console.log("✅ Firebase activo: Acceso directo habilitado.");
     </script>
 
+    <!-- 💳 Pagos -->
     <script src="js/payment.js"></script>
+
+    <!-- 🧠 Lógica principal -->
     <script type="module" src="js/script.js"></script>
 
 </body>

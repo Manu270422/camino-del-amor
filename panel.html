@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mis cartas · Camino del Amor</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="css/panel.css"/>
+</head>
+<body>
+
+  <header class="panel-header">
+    <a href="index.html" class="header-logo">Camino del Amor</a>
+    <div class="header-right">
+      <div class="user-chip" id="user-chip" style="display:none">
+        <div class="avatar-init" id="chip-avatar">?</div>
+        <span class="chip-name" id="chip-name">—</span>
+        <span class="status-badge" id="chip-status">free</span>
+      </div>
+      <button class="btn-signout" id="btn-signout" onclick="window.cerrarSesion()" style="display:none">
+        Salir
+      </button>
+    </div>
+  </header>
+
+  <main class="panel-main" id="panel-main">
+
+    <div class="auth-required" id="state-auth-required" style="display:none">
+      <div class="lock-icon">🔐</div>
+      <h2>Acceso privado</h2>
+      <p>Inicia sesión con Google para ver tu historial de cartas y gestionar tu cuenta.</p>
+      <button class="btn-login-google" onclick="window.loginConGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+        </svg>
+        Continuar con Google
+      </button>
+    </div>
+
+    <div id="state-authenticated" style="display:none">
+
+      <div class="panel-hero">
+        <h1>Tus cartas de <em>amor</em></h1>
+        <p id="hero-sub">Cargando tu historial...</p>
+      </div>
+
+      <div class="premium-banner" id="premium-banner" style="display:none">
+        <div class="banner-text">
+          <h3>Desbloquea cartas ilimitadas 💌</h3>
+          <p>Con un solo pago de $10.000 COP creas todas las cartas que quieras, para siempre.</p>
+        </div>
+        <a href="personalizar.html" class="btn-upgrade">Obtener membresía</a>
+      </div>
+
+      <div class="action-bar">
+        <a href="personalizar.html" class="btn-nueva-carta">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva carta
+        </a>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all" onclick="filtrarCartas('all', this)">Todas</button>
+          <button class="filter-tab" data-filter="amor" onclick="filtrarCartas('amor', this)">Amor</button>
+          <button class="filter-tab" data-filter="aniversario" onclick="filtrarCartas('aniversario', this)">Aniversario</button>
+          <button class="filter-tab" data-filter="otro" onclick="filtrarCartas('otro', this)">Otras</button>
+        </div>
+      </div>
+
+      <div id="cartas-container">
+        <div class="loading-grid" id="loading-grid">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+        <div class="empty-state" id="empty-state" style="display:none">
+          <div class="empty-icon">💌</div>
+          <h3>Aún no has creado cartas</h3>
+          <p>Tu primera carta está a un clic de distancia. Cuéntale algo especial a alguien.</p>
+        </div>
+        <div class="cartas-grid" id="cartas-grid" style="display:none"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/firebase-bridge.js"></script>
+  <script type="module" src="js/panel.js"></script>
+
+</body>
+</html>

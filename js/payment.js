@@ -9,7 +9,7 @@ const FUNCTIONS_URL = '/.netlify/functions';
 window.generarCarta = async function(storyData) {
     console.log("💌 Mapeando datos para consistencia...", storyData);
     
-    // Aseguramos que los nombres coincidan con lo que espera el backend corregido
+    // Aquí estandarizamos los nombres para que el backend no se confunda
     const dataAdaptada = {
         recipientName: storyData.recipientName || storyData.to || '',
         senderName:    storyData.senderName || storyData.from || '',
@@ -37,21 +37,26 @@ window.generarCarta = async function(storyData) {
 
 /**
  * Función principal de pago y publicación.
+ * Ajustada para usar Firebase v8 (Namespaced API).
  */
 window.iniciarPago = async function(storyData) {
-  // Verificamos usuario en el puente global
-  const auth = window.auth || window.firebaseAuth;
+  // Usamos los objetos globales 'auth' y 'db' que ya inicializamos en personalizar.js
   const user = auth ? auth.currentUser : null;
 
+  // Si no hay usuario logueado, forzamos el inicio de sesión
   if (!user) {
     if(window.mostrarToast) window.mostrarToast('Inicia sesión para guardar tu carta ✨', 'info');
     try {
-      const provider = new window.GoogleAuthProvider();
-      await window.signInWithPopup(auth, provider);
-      // Tras el login exitoso, re-intentamos
+      // Firebase v8: Usamos el constructor del provider a través del namespace firebase
+      const provider = new firebase.auth.GoogleAuthProvider();
+      
+      // Firebase v8: Método directo en el objeto auth
+      await auth.signInWithPopup(provider);
+      
+      // Tras el login exitoso, volvemos a llamar a esta función para continuar
       return window.iniciarPago(storyData);
     } catch (err) {
-      console.error("❌ Login cancelado o fallido:", err);
+      console.error("❌ Login fallido:", err);
       mostrarError("Debes iniciar sesión para continuar.");
       return;
     }
@@ -60,21 +65,22 @@ window.iniciarPago = async function(storyData) {
   try {
     mostrarLoader('Verificando tu cuenta... ⏳');
 
-    const db = window.db || window.firebaseFirestore;
-    const docRef = window.doc(db, 'users', user.uid);
-    const snap = await window.getDoc(docRef);
+    // Firebase v8: Accedemos a la colección y documento con la sintaxis de cadena
+    const docRef = db.collection('users').doc(user.uid);
+    const snap = await docRef.get();
     
-    const perfil = snap.exists() ? snap.data() : { hasMembership: false };
+    // Si el doc existe, verificamos el campo de membresía
+    const perfil = snap.exists ? snap.data() : { hasMembership: false };
 
     if (perfil.hasMembership === true) {
-      // USUARIO VIP: Directo a la DB
+      // Es usuario premium, guardamos la carta sin pasar por pago
       await guardarCartaDirecto(storyData, user);
     } else {
-      // USUARIO NUEVO: A pagar en Mercado Pago
+      // Usuario nuevo, lo enviamos al flujo de Mercado Pago
       await flujoMercadoPago(storyData, user);
     }
   } catch (err) {
-    console.error("❌ Error en el flujo de pago:", err);
+    console.error("❌ Error en el flujo:", err);
     mostrarError('Problema de conexión. Intenta de nuevo.');
   }
 }
@@ -82,7 +88,8 @@ window.iniciarPago = async function(storyData) {
 async function flujoMercadoPago(storyData, user) {
   mostrarLoader('Preparando pago... 💳');
   try {
-    const idToken = await user.getIdToken(true); // Forzamos refresco de token
+    // Obtenemos el token para autenticar la petición al servidor
+    const idToken = await user.getIdToken(true); 
     const payload = {
       userId: user.uid,
       storyData: storyData 
@@ -104,22 +111,17 @@ async function flujoMercadoPago(storyData, user) {
     
     const { checkoutUrl, sessionId } = await res.json();
 
-    // Guardamos sesión y los datos de la carta por si procesando.html los necesita
+    // Guardamos contexto para que procesando.html sepa qué hacer después
     sessionStorage.setItem('cda_session', sessionId);
     sessionStorage.setItem('cda_story', JSON.stringify(storyData));
 
-    // ── PASO 1: ir a procesando.html (muestra el spinner de espera)
-    // procesando.html leerá cda_session y hará polling a Firestore.
-    // Cuando paid===true, procesando.html redirige sola a carta.html?id=...
-    // El checkoutUrl de MP abre en nueva pestaña para que procesando.html
-    // quede activa haciendo polling en la pestaña original.
-    window.open(checkoutUrl, '_blank');           // pago en pestaña nueva
-    window.location.href = 'procesando.html';    // polling en esta pestaña
+    // Abrimos el pago en otra pestaña para mantener nuestra app viva en la principal
+    window.open(checkoutUrl, '_blank');
+    window.location.href = 'procesando.html';
 
   } catch (error) {
     console.error("❌ Error Mercado Pago:", error);
     mostrarError("No pudimos conectar con Mercado Pago.");
-    // Redirigir a error.html tras un breve delay para que el usuario lea el mensaje
     setTimeout(() => { window.location.href = 'error.html'; }, 2000);
   }
 }
@@ -127,16 +129,15 @@ async function flujoMercadoPago(storyData, user) {
 async function guardarCartaDirecto(storyData, user) {
   mostrarLoader('Publicando tu historia... 🚀');
   try {
-    const idToken = await user.getIdToken(true); // Aseguramos token fresco
+    const idToken = await user.getIdToken(true); 
     
-    // ENVIAMOS EL PAYLOAD EXACTO QUE LA FUNCIÓN ESPERA
     const res = await fetch(`${FUNCTIONS_URL}/save-letter`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${idToken}`
       },
-      body: JSON.stringify({ storyData: storyData }), // Envoltura correcta
+      body: JSON.stringify({ storyData: storyData }),
     });
 
     const resultado = await res.json();
@@ -145,7 +146,7 @@ async function guardarCartaDirecto(storyData, user) {
         throw new Error(resultado.error || "Error al guardar");
     }
 
-    // ÉXITO: Redirección al visor individual
+    // Si todo salió bien, enviamos al usuario a ver su carta creada
     window.location.href = `carta.html?id=${resultado.letterId}&nueva=1`;
 
   } catch (error) {
