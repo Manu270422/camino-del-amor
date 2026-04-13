@@ -3,35 +3,33 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
 // ============================================================================
-// CHEQUEO DE VARIABLES DE ENTORNO (DEBUG INICIAL)
+// 1. CONFIGURACIÓN INICIAL Y FIREBASE
 // ============================================================================
-console.log("--- CHEQUEO DE VARIABLES ---");
-console.log("PROJECT_ID:", process.env.FIREBASE_PROJECT_ID ? "✅ OK" : "❌ VACÍO");
-console.log("CLIENT_EMAIL:", process.env.FIREBASE_CLIENT_EMAIL ? "✅ OK" : "❌ VACÍO");
-console.log("----------------------------");
-
-// Inicializamos Firebase Admin
 if (!getApps().length) {
   try {
     initializeApp({
       credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        // El .replace ayuda a que las llaves pegadas en Netlify funcionen perfecto
         privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
       }),
     });
-    console.log("🔥 Firebase Admin inicializado correctamente");
+    console.log("🔥 Firebase Admin: ¡Listo para la acción!");
   } catch (error) {
-    console.error("❌ Error al inicializar Firebase Admin:", error.message);
+    console.error("❌ Error Firebase Admin:", error.message);
   }
 }
 
 exports.handler = async (event) => {
+  // Solo aceptamos peticiones POST (seguridad)
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, body: 'Método no permitido' };
   }
 
-  // 1. VALIDACIÓN DE IDENTIDAD
+  // ============================================================================
+  // 2. VALIDACIÓN DE USUARIO (AUTH)
+  // ============================================================================
   const authHeader = event.headers['authorization'] || '';
   const idToken = authHeader.replace('Bearer ', '');
   
@@ -40,73 +38,89 @@ exports.handler = async (event) => {
     const decodedToken = await getAuth().verifyIdToken(idToken);
     uid = decodedToken.uid;
   } catch (err) {
-    console.error("❌ Error de autenticación:", err.message);
-    return { statusCode: 401, body: 'Debes estar logueado para pagar.' };
+    console.error("❌ Token inválido:", err.message);
+    return { statusCode: 401, body: JSON.stringify({ error: 'Sesión expirada o inválida' }) };
   }
 
+  // ============================================================================
+  // 3. PROCESAMIENTO DE DATOS RECIBIDOS
+  // ============================================================================
   let body;
-  try { body = JSON.parse(event.body); } 
-  catch { return { statusCode: 400, body: 'Body inválido' }; }
+  try { 
+    body = JSON.parse(event.body); 
+  } catch { 
+    return { statusCode: 400, body: 'Datos del formulario corruptos' }; 
+  }
 
   const { storyData } = body;
   if (!storyData) {
-    return { statusCode: 400, body: 'Faltan los datos de la historia' };
+    return { statusCode: 400, body: 'No recibimos la información de tu historia' };
   }
 
-  const sessionId = `membresia_${uid}_${Date.now()}`;
+  // Creamos un ID único para esta transacción
+  const sessionId = `love_${uid.substring(0, 5)}_${Date.now()}`;
 
-  // DEBUG MERCADO PAGO
-  console.log("DEBUG: Token MP cargado ->", process.env.MP_ACCESS_TOKEN ? "✅ SÍ" : "❌ NO");
-
+  // ============================================================================
+  // 4. CONFIGURACIÓN DE MERCADO PAGO
+  // ============================================================================
   const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
   const preference = new Preference(client);
 
   try {
-    // ============================================================================
-    // AJUSTE FINAL: URLS REALES PARA PRODUCCIÓN
-    // ============================================================================
+    console.log("⏳ Iniciando creación de preferencia en Mercado Pago...");
+
     const result = await preference.create({
       body: {
         items: [
           {
+            id: 'carta-premium-001',
             title: 'Tu Carta de Amor Personalizada',
             unit_price: 10000,
             quantity: 1,
             currency_id: 'COP'
           }
         ],
-        // FLUJO PROFESIONAL: El usuario vuelve a tu app después de pagar
         back_urls: {
           success: "https://camino-del-amor.netlify.app/procesando.html",
           failure: "https://camino-del-amor.netlify.app/error.html",
           pending: "https://camino-del-amor.netlify.app/procesando.html"
         },
-        auto_return: "approved", 
-        external_reference: JSON.stringify({
-          uid: uid,
-          storyData: storyData,
-          sessionId: sessionId
-        }),
-        // Asegúrate de que esta URL esté bien configurada en tus variables de Netlify
-        notification_url: `${process.env.URL || 'https://camino-del-amor.netlify.app'}/.netlify/functions/mp-webhook`,
+        auto_return: "approved",
+        
+        /* ⚠️ CORRECCIÓN CLAVE:
+           No enviamos storyData aquí porque es MUY pesado y rompe Mercado Pago.
+           Enviamos solo lo vital. La historia ya está guardada en el LocalStorage
+           del usuario o la guardaremos en Firebase después del pago.
+        */
+        external_reference: `${uid}___${sessionId}`, 
+
+        /* Si el error persiste, puedes comentar la línea de notification_url temporalmente
+           para probar si Mercado Pago está rechazando el webhook.
+        */
+        notification_url: "https://camino-del-amor.netlify.app/.netlify/functions/mp-webhook",
       },
     });
 
-    console.log("✅ Preferencia de Producción creada:", result.id);
+    console.log("✅ ¡Éxito! Checkout generado:", result.id);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId,
-        checkoutUrl: result.init_point,
+        checkoutUrl: result.init_point, // URL a la que mandaremos al usuario
       }),
     };
+
   } catch (err) {
-    console.error('❌ Error detallado en MP:', err);
+    // Si Mercado Pago responde algo que no es JSON, capturamos el error aquí
+    console.error('❌ ERROR CRÍTICO MERCADO PAGO:', err.message);
     return { 
       statusCode: 500, 
-      body: JSON.stringify({ error: 'Error al crear preferencia', details: err.message }) 
+      body: JSON.stringify({ 
+        error: 'Mercado Pago no pudo procesar la solicitud',
+        details: err.message 
+      }) 
     };
   }
 };
