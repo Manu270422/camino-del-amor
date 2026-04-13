@@ -75,7 +75,7 @@ exports.handler = async (event) => {
           {
             id: 'carta-premium-001',
             title: 'Tu Carta de Amor Personalizada',
-            unit_price: 10000,
+            unit_price: 1000,
             quantity: 1,
             currency_id: 'COP'
           }
