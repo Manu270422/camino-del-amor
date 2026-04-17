@@ -46,10 +46,17 @@ function renderizarHeader(user, profile) {
   chip.style.display    = 'flex';
   btnSignout.style.display = 'block';
 
-  // Avatar
+  // Avatar — usamos createElement + setAttribute en lugar de
+  // plantillas HTML para evitar XSS si el displayName/photoURL del
+  // usuario contiene caracteres como `"` o `<` (Google permite
+  // ciertos caracteres en el displayName).
   if (user.photoURL) {
-    chipAvatar.outerHTML = `<img id="chip-avatar" src="${user.photoURL}"
-      alt="${user.displayName}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;"/>`;
+    const img = document.createElement('img');
+    img.id = 'chip-avatar';
+    img.src = user.photoURL;
+    img.alt = user.displayName || 'Avatar';
+    img.style.cssText = 'width:28px;height:28px;border-radius:50%;object-fit:cover;';
+    chipAvatar.replaceWith(img);
   } else {
     chipAvatar.textContent = user.displayName?.[0]?.toUpperCase() || '?';
   }
@@ -125,45 +132,90 @@ function crearTarjeta(carta, index) {
   const shortId     = carta.letterId?.slice(-8) || carta.id?.slice(-8) || '—';
   const paraText    = carta.recipientName || 'Alguien especial';
   const deText      = carta.senderName    ? `De ${carta.senderName}` : '';
-  const urlCarta    = `carta.html?id=${carta.letterId || carta.id}`;
+  const urlCarta    = `carta.html?id=${encodeURIComponent(carta.letterId || carta.id)}`;
   const urlCompartir = `${window.location.origin}/${urlCarta}`;
 
-  // Thumbnail
-  const thumbHTML = carta.photoUrl
-    ? `<img src="${carta.photoUrl}" alt="Foto de la carta" loading="lazy"
-            onerror="this.parentElement.innerHTML='<div class=\\'card-thumb-placeholder\\'><span>💌</span></div>'">`
-    : `<div class="card-thumb-placeholder"><span>💌</span></div>`;
+  // Toda la tarjeta se construye con createElement/textContent para
+  // evitar XSS: recipientName/senderName/photoUrl provienen de Firestore
+  // y podrían contener HTML malicioso si el backend llegara a aceptarlo.
+  const thumb = document.createElement('div');
+  thumb.className = 'card-thumb';
 
-  card.innerHTML = `
-    <div class="card-thumb">
-      ${thumbHTML}
-      <span class="card-occasion">${ocasion}</span>
-      <div class="card-overlay">
-        <a href="${urlCarta}" class="overlay-btn ver" target="_blank" rel="noopener">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-          Ver carta
-        </a>
-        <button class="overlay-btn copiar" onclick="copiarEnlace('${urlCompartir}', event)">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-          </svg>
-          Copiar link
-        </button>
-      </div>
-    </div>
-    <div class="card-body">
-      <p class="card-para">Para ${paraText}</p>
-      <p class="card-de">${deText}</p>
-      <div class="card-footer">
-        <span class="card-date">${fecha}</span>
-        <span class="card-id">#${shortId}</span>
-      </div>
-    </div>
-  `;
+  if (carta.photoUrl) {
+    const img = document.createElement('img');
+    img.src = carta.photoUrl;
+    img.alt = 'Foto de la carta';
+    img.loading = 'lazy';
+    img.addEventListener('error', () => {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'card-thumb-placeholder';
+      const span = document.createElement('span');
+      span.textContent = '💌';
+      placeholder.appendChild(span);
+      img.replaceWith(placeholder);
+    });
+    thumb.appendChild(img);
+  } else {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'card-thumb-placeholder';
+    const span = document.createElement('span');
+    span.textContent = '💌';
+    placeholder.appendChild(span);
+    thumb.appendChild(placeholder);
+  }
+
+  const occasionBadge = document.createElement('span');
+  occasionBadge.className = 'card-occasion';
+  occasionBadge.textContent = ocasion;
+  thumb.appendChild(occasionBadge);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'card-overlay';
+
+  const verLink = document.createElement('a');
+  verLink.className = 'overlay-btn ver';
+  verLink.href = urlCarta;
+  verLink.target = '_blank';
+  verLink.rel = 'noopener';
+  verLink.textContent = 'Ver carta';
+  overlay.appendChild(verLink);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'overlay-btn copiar';
+  copyBtn.type = 'button';
+  copyBtn.textContent = 'Copiar link';
+  copyBtn.addEventListener('click', (e) => window.copiarEnlace(urlCompartir, e));
+  overlay.appendChild(copyBtn);
+
+  thumb.appendChild(overlay);
+  card.appendChild(thumb);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  const pPara = document.createElement('p');
+  pPara.className = 'card-para';
+  pPara.textContent = `Para ${paraText}`;
+  body.appendChild(pPara);
+
+  const pDe = document.createElement('p');
+  pDe.className = 'card-de';
+  pDe.textContent = deText;
+  body.appendChild(pDe);
+
+  const footer = document.createElement('div');
+  footer.className = 'card-footer';
+  const spanDate = document.createElement('span');
+  spanDate.className = 'card-date';
+  spanDate.textContent = fecha;
+  const spanId = document.createElement('span');
+  spanId.className = 'card-id';
+  spanId.textContent = `#${shortId}`;
+  footer.appendChild(spanDate);
+  footer.appendChild(spanId);
+  body.appendChild(footer);
+
+  card.appendChild(body);
 
   // Click en la tarjeta (fuera de los botones) abre la carta
   card.addEventListener('click', (e) => {

@@ -72,16 +72,23 @@ exports.handler = async (event) => {
 
     if (payment.status !== 'approved') return { statusCode: 200, body: 'Ignorado' };
 
-    // Extraer metadata
-    let ref;
-    try {
-      ref = JSON.parse(payment.external_reference);
-    } catch {
-      console.error('external_reference no es JSON');
+    // Extraer metadata.
+    // create-preference.js envía external_reference con el formato
+    // `${uid}___${sessionId}` (no JSON). Antes se intentaba JSON.parse
+    // y fallaba siempre: todos los pagos se rechazaban con "Ref inválida",
+    // dejando al usuario pagando sin obtener membresía.
+    const reference = String(payment.external_reference || '');
+    const sep = '___';
+    const sepIdx = reference.indexOf(sep);
+    if (sepIdx === -1) {
+      console.error('external_reference con formato inesperado:', reference);
       return { statusCode: 400, body: 'Ref inválida' };
     }
-
-    const { uid, sessionId, storyData } = ref;
+    const uid       = reference.slice(0, sepIdx);
+    const sessionId = reference.slice(sepIdx + sep.length);
+    if (!uid || !sessionId) {
+      return { statusCode: 400, body: 'Ref inválida' };
+    }
 
     // Verificar Idempotencia
     const paymentDoc = await db.collection('payments').doc(sessionId).get();
@@ -89,13 +96,12 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: 'Ya procesado' };
     }
 
-    const letterId = `carta_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     const batch = db.batch();
 
-    // 1. ACTUALIZAR USUARIO A PREMIUM (Fusión Claude + Tuya)
+    // 1. ACTUALIZAR USUARIO A PREMIUM
     batch.set(db.collection('users').doc(uid), {
-      status: 'premium',          // Nuevo campo de Claude
-      hasMembership: true,        // Tu campo actual
+      status: 'premium',
+      hasMembership: true,
       memberSince: new Date().toISOString(),
       membershipType: 'lifetime',
       lastPaymentId: String(paymentId)
@@ -103,28 +109,22 @@ exports.handler = async (event) => {
 
     // 2. REGISTRAR EL PAGO (Para que procesando.html funcione)
     batch.set(db.collection('payments').doc(sessionId), {
-      paid: true, 
+      paid: true,
       uid,
       paymentId: String(paymentId),
-      letterId,
       amount: payment.transaction_amount,
       paidAt: new Date().toISOString(),
     });
 
-    // 3. PUBLICAR LA CARTA (Vital para que no se pierda el trabajo del cliente)
-    if (storyData) {
-      batch.set(db.collection('letters').doc(letterId), {
-        ...storyData,
-        userId: uid,
-        letterId,
-        sessionId,
-        published: true,
-        createdAt: new Date().toISOString(),
-      });
-    }
+    // NOTA: la carta ya NO se crea desde el webhook. El frontend envía
+    // storyData a /.netlify/functions/save-letter tras ver que el usuario
+    // es premium (save-letter verifica token + hasMembership). Antes el
+    // webhook intentaba crear la carta con storyData leído de
+    // external_reference, pero ese campo no lo contiene (MP limita
+    // su tamaño), así que la lógica estaba muerta.
 
     await batch.commit();
-    console.log(`✅ Éxito total: Usuario ${uid} es Premium y carta ${letterId} guardada.`);
+    console.log(`✅ Usuario ${uid} marcado como Premium (pago ${paymentId}).`);
 
     return { statusCode: 200, body: 'OK' };
 

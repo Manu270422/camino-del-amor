@@ -17,11 +17,17 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Security headers for every response.
+# NOTE: CORS headers were previously wildcarded (Access-Control-Allow-Origin = "*")
+# on every path — including /api/*. That allowed any website to invoke our
+# Netlify Functions with a user's Firebase ID token if it could obtain one.
+# We now rely on same-origin requests (the frontend is served from the same
+# Netlify site). If cross-origin access is ever needed it must be scoped
+# per-function and per-origin, not wildcarded site-wide.
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
