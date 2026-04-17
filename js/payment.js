@@ -5,8 +5,12 @@ const FUNCTIONS_URL = '/.netlify/functions';
 /**
  * PUENTE DE CONEXIÓN:
  * Traduce los datos del formulario al formato exacto de la DB y carta.js
+ *
+ * @param {Object} storyData       Datos de la carta
+ * @param {Object} [opts]          Opciones adicionales
+ * @param {string} [opts.discountCode] Código de descuento ingresado por el usuario
  */
-window.generarCarta = async function(storyData) {
+window.generarCarta = async function(storyData, opts = {}) {
     console.log("💌 Mapeando datos para consistencia...", storyData);
     
     // Aquí estandarizamos los nombres para que el backend no se confunda
@@ -32,14 +36,17 @@ window.generarCarta = async function(storyData) {
         published: true
     };
 
-    return window.iniciarPago(dataAdaptada);
+    return window.iniciarPago(dataAdaptada, opts);
 };
 
 /**
  * Función principal de pago y publicación.
  * Ajustada para usar Firebase v8 (Namespaced API).
+ *
+ * @param {Object} storyData       Datos de la carta
+ * @param {Object} [opts]          Opciones adicionales (ej. discountCode)
  */
-window.iniciarPago = async function(storyData) {
+window.iniciarPago = async function(storyData, opts = {}) {
   // Usamos los objetos globales 'auth' y 'db' que ya inicializamos en personalizar.js
   const user = auth ? auth.currentUser : null;
 
@@ -54,7 +61,7 @@ window.iniciarPago = async function(storyData) {
       await auth.signInWithPopup(provider);
       
       // Tras el login exitoso, volvemos a llamar a esta función para continuar
-      return window.iniciarPago(storyData);
+      return window.iniciarPago(storyData, opts);
     } catch (err) {
       console.error("❌ Login fallido:", err);
       mostrarError("Debes iniciar sesión para continuar.");
@@ -77,7 +84,7 @@ window.iniciarPago = async function(storyData) {
       await guardarCartaDirecto(storyData, user);
     } else {
       // Usuario nuevo, lo enviamos al flujo de Mercado Pago
-      await flujoMercadoPago(storyData, user);
+      await flujoMercadoPago(storyData, user, opts);
     }
   } catch (err) {
     console.error("❌ Error en el flujo:", err);
@@ -85,14 +92,16 @@ window.iniciarPago = async function(storyData) {
   }
 }
 
-async function flujoMercadoPago(storyData, user) {
+async function flujoMercadoPago(storyData, user, opts = {}) {
   mostrarLoader('Preparando pago... 💳');
   try {
     // Obtenemos el token para autenticar la petición al servidor
     const idToken = await user.getIdToken(true); 
     const payload = {
       userId: user.uid,
-      storyData: storyData 
+      storyData: storyData,
+      // Enviamos el código de descuento (si lo hay) para validarlo en el backend
+      discountCode: (opts.discountCode || '').trim() || undefined,
     };
 
     const res = await fetch(`${FUNCTIONS_URL}/create-preference`, {
@@ -109,7 +118,20 @@ async function flujoMercadoPago(storyData, user) {
         throw new Error(errData.error || "Error en Mercado Pago");
     }
     
-    const { checkoutUrl, sessionId } = await res.json();
+    const { checkoutUrl, sessionId, pricing } = await res.json();
+
+    if (pricing && pricing.appliedCode) {
+      console.log(
+        `🎟️ Descuento "${pricing.appliedCode}" aplicado. ` +
+        `Precio final: ${pricing.finalPrice} COP (ahorro: ${pricing.discount} COP).`
+      );
+      if (window.mostrarToast) {
+        window.mostrarToast(
+          `Código ${pricing.appliedCode} aplicado ✨ Precio: $${pricing.finalPrice} COP`,
+          'success'
+        );
+      }
+    }
 
     // Guardamos contexto para que procesando.html sepa qué hacer después
     sessionStorage.setItem('cda_session', sessionId);
