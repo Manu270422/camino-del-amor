@@ -3,6 +3,63 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
 // ============================================================================
+// HELPERS DE VALIDACIÓN
+// ============================================================================
+const jsonResponse = (statusCode, payload) => ({
+  statusCode,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+});
+
+/**
+ * Valida que un item tenga todos los campos requeridos por Mercado Pago
+ * (title, unit_price, quantity) con tipos y valores correctos.
+ * Devuelve un string con el error o null si todo está OK.
+ */
+const validateItem = (item, index) => {
+  const prefix = `items[${index}]`;
+
+  if (!item || typeof item !== 'object') {
+    return `${prefix} debe ser un objeto válido`;
+  }
+
+  if (typeof item.title !== 'string' || item.title.trim() === '') {
+    return `${prefix}.title es obligatorio y debe ser un texto no vacío`;
+  }
+
+  if (typeof item.unit_price !== 'number' || !Number.isFinite(item.unit_price) || item.unit_price <= 0) {
+    return `${prefix}.unit_price es obligatorio y debe ser un número positivo`;
+  }
+
+  if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+    return `${prefix}.quantity es obligatorio y debe ser un entero positivo`;
+  }
+
+  return null;
+};
+
+/**
+ * Valida los datos mínimos de la historia que recibimos del frontend.
+ * Mantiene la validación laxa: solo exigimos los campos que realmente
+ * necesitamos para generar la carta tras el pago.
+ */
+const validateStoryData = (storyData) => {
+  if (!storyData || typeof storyData !== 'object' || Array.isArray(storyData)) {
+    return 'storyData debe ser un objeto con los datos de la historia';
+  }
+
+  const requiredStrings = ['recipientName', 'senderName', 'message'];
+  for (const field of requiredStrings) {
+    const value = storyData[field];
+    if (typeof value !== 'string' || value.trim() === '') {
+      return `storyData.${field} es obligatorio y debe ser un texto no vacío`;
+    }
+  }
+
+  return null;
+};
+
+// ============================================================================
 // 1. CONFIGURACIÓN INICIAL Y FIREBASE
 // ============================================================================
 if (!getApps().length) {
@@ -32,37 +89,73 @@ exports.handler = async (event) => {
   // ============================================================================
   const authHeader = event.headers['authorization'] || '';
   const idToken = authHeader.replace('Bearer ', '');
-  
+
   let uid;
   try {
     const decodedToken = await getAuth().verifyIdToken(idToken);
     uid = decodedToken.uid;
   } catch (err) {
     console.error("❌ Token inválido:", err.message);
-    return { statusCode: 401, body: JSON.stringify({ error: 'Sesión expirada o inválida' }) };
+    return jsonResponse(401, { error: 'Sesión expirada o inválida' });
   }
 
   // ============================================================================
   // 3. PROCESAMIENTO DE DATOS RECIBIDOS
   // ============================================================================
   let body;
-  try { 
-    body = JSON.parse(event.body); 
-  } catch { 
-    return { statusCode: 400, body: 'Datos del formulario corruptos' }; 
+  try {
+    body = JSON.parse(event.body);
+  } catch {
+    return jsonResponse(400, { error: 'Datos del formulario corruptos' });
+  }
+
+  if (!body || typeof body !== 'object') {
+    return jsonResponse(400, { error: 'El cuerpo de la petición debe ser un objeto JSON válido' });
   }
 
   const { storyData } = body;
-  if (!storyData) {
-    return { statusCode: 400, body: 'No recibimos la información de tu historia' };
+  const storyError = validateStoryData(storyData);
+  if (storyError) {
+    console.warn("⚠️ Validación storyData falló:", storyError);
+    return jsonResponse(400, { error: storyError });
+  }
+
+  // ============================================================================
+  // 4. PREPARACIÓN Y VALIDACIÓN DE ITEMS
+  // ============================================================================
+  const items = [
+    {
+      id: 'carta-premium-001',
+      title: 'Tu Carta de Amor Personalizada',
+      unit_price: 1000,
+      quantity: 1,
+      currency_id: 'COP'
+    }
+  ];
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return jsonResponse(400, { error: 'Se requiere al menos un item para crear la preferencia' });
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    const itemError = validateItem(items[i], i);
+    if (itemError) {
+      console.warn("⚠️ Validación de item falló:", itemError);
+      return jsonResponse(400, { error: itemError });
+    }
   }
 
   // Creamos un ID único para esta transacción
   const sessionId = `love_${uid.substring(0, 5)}_${Date.now()}`;
 
   // ============================================================================
-  // 4. CONFIGURACIÓN DE MERCADO PAGO
+  // 5. CONFIGURACIÓN DE MERCADO PAGO
   // ============================================================================
+  if (!process.env.MP_ACCESS_TOKEN) {
+    console.error("❌ MP_ACCESS_TOKEN no está configurado");
+    return jsonResponse(500, { error: 'Configuración de pagos incompleta en el servidor' });
+  }
+
   const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
   const preference = new Preference(client);
 
@@ -71,15 +164,7 @@ exports.handler = async (event) => {
 
     const result = await preference.create({
       body: {
-        items: [
-          {
-            id: 'carta-premium-001',
-            title: 'Tu Carta de Amor Personalizada',
-            unit_price: 1000,
-            quantity: 1,
-            currency_id: 'COP'
-          }
-        ],
+        items,
         back_urls: {
           success: "https://camino-del-amor.netlify.app/procesando.html",
           failure: "https://camino-del-amor.netlify.app/error.html",
