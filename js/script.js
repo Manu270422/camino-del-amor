@@ -104,11 +104,22 @@ function mostrarEstado(estado, user) {
 }
 
 // Pinta el circulito con la foto de perfil del usuario.
+// Construimos el elemento vía DOM APIs (createElement + setAttribute)
+// para evitar XSS si url/name contienen caracteres como `"` o `<`.
 function _setAvatar(id, url, name) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (url) el.outerHTML = `<img id="${id}" class="user-avatar" src="${url}" alt="${name}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"/>`;
-    else el.textContent = name ? name[0].toUpperCase() : '?';
+    if (url) {
+        const img = document.createElement('img');
+        img.id = id;
+        img.className = 'user-avatar';
+        img.src = url;
+        img.alt = name || 'Avatar';
+        img.style.cssText = 'width:40px;height:40px;border-radius:50%;object-fit:cover;';
+        el.replaceWith(img);
+    } else {
+        el.textContent = name ? name[0].toUpperCase() : '?';
+    }
 }
 
 // Toma los datos de mi variable 'C' (la carta) y los dibuja en el HTML (cuando uso el visor).

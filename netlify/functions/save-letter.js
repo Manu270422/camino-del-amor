@@ -66,27 +66,83 @@ exports.handler = async (event) => {
 
     // Validación de campos críticos
     if (!data.recipientName || !data.senderName) {
-      return { 
-        statusCode: 400, 
-        body: JSON.stringify({ error: 'Faltan campos obligatorios: recipientName o senderName' }) 
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Faltan campos obligatorios: recipientName o senderName' })
       };
     }
+
+    // ── Sanitización / límites de tamaño ─────────────────────────────
+    // Evita DoS / abuso de Firestore: sin estos límites un miembro
+    // podría publicar cartas de varios MB cada una o miles de
+    // capítulos y agotar la cuota/coste del proyecto.
+    const LIMITS = {
+      name:      120,
+      message:   10_000,
+      song:      300,
+      url:       2_000,
+      chapters:  50,
+      chapTitle: 200,
+      chapBody:  10_000,
+    };
+    const ALLOWED_OCCASIONS = new Set([
+      'amor', 'aniversario', 'cumpleanos',
+      'reconciliacion', 'amistad', 'otro'
+    ]);
+
+    const str = (v, max) => {
+      if (v === undefined || v === null) return '';
+      if (typeof v !== 'string') return '';
+      return v.slice(0, max);
+    };
+    const safeUrl = (v, max) => {
+      const s = str(v, max);
+      if (!s) return '';
+      // Sólo permitimos http(s). Bloqueamos javascript:, data:, etc.
+      return /^https?:\/\//i.test(s) ? s : '';
+    };
+
+    const recipientName = str(data.recipientName, LIMITS.name).trim();
+    const senderName    = str(data.senderName,    LIMITS.name).trim();
+    if (!recipientName || !senderName) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'recipientName/senderName inválidos' })
+      };
+    }
+
+    const occasionRaw = typeof data.occasion === 'string' ? data.occasion : 'amor';
+    const occasion    = ALLOWED_OCCASIONS.has(occasionRaw) ? occasionRaw : 'amor';
+
+    const chaptersIn = Array.isArray(data.chapters) ? data.chapters : [];
+    if (chaptersIn.length > LIMITS.chapters) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: `Máximo ${LIMITS.chapters} capítulos` })
+      };
+    }
+    const chapters = chaptersIn.map((c) => ({
+      t:        str(c?.t,     LIMITS.chapTitle),
+      body:     str(c?.body,  LIMITS.chapBody),
+      img:      safeUrl(c?.img,      LIMITS.url),
+      videoUrl: safeUrl(c?.videoUrl, LIMITS.url),
+    }));
 
     // 4. Crear ID único y Guardar
     const letterId = `carta_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
     const finalData = {
-      recipientName: data.recipientName,
-      senderName:    data.senderName,
-      occasion:      data.occasion || 'amor',
-      message:       data.message || '',
-      song:          data.song || '',
-      photoUrl:      data.photoUrl || '',
-      chapters:      data.chapters || [], // Por si envías fotos/textos por partes
-      letterId:      letterId,
-      userId:        uid,
-      published:     true,
-      createdAt:     new Date().toISOString(),
+      recipientName,
+      senderName,
+      occasion,
+      message:   str(data.message, LIMITS.message),
+      song:      str(data.song,    LIMITS.song),
+      photoUrl:  safeUrl(data.photoUrl, LIMITS.url),
+      chapters,
+      letterId,
+      userId:    uid,
+      published: true,
+      createdAt: new Date().toISOString(),
     };
 
     await db.collection('letters').doc(letterId).set(finalData);

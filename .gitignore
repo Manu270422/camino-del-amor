@@ -1,4 +1,18 @@
 # Local Netlify folder
 .netlify
+
+# Credentials / secrets — never commit
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+
+# Dependencies (Netlify runs `npm install` during build)
 node_modules/
+
+# Misc
+.DS_Store
+*.log
