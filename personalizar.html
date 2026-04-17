@@ -116,6 +116,14 @@
         👁️ Previsualizar carta
       </button>
 
+      <div class="field-group">
+        <label class="label">Código de descuento (opcional) 🎟️</label>
+        <input type="text" id="discount-code" class="input-text"
+               placeholder="Ej: AMOR10"
+               autocomplete="off" autocapitalize="characters"
+               style="text-transform: uppercase;">
+      </div>
+
       <div class="finish-zone">
         <div id="status-msg" style="margin-bottom: 10px;"></div>
         <button class="btn-finish" id="btn-publish" onclick="publishStory()">
@@ -175,8 +183,11 @@
       btn.querySelector('span').textContent = 'Publicando...';
       btn.querySelector('.spinner').style.display = 'inline-block';
 
+      // Leemos el código de descuento (opcional) para pasarlo al backend
+      const discountCode = document.getElementById('discount-code')?.value.trim() || '';
+
       try {
-        if (window.generarCarta) await window.generarCarta(storyData);
+        if (window.generarCarta) await window.generarCarta(storyData, { discountCode });
       } catch (err) {
         console.error(err);
       } finally {

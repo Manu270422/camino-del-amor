@@ -3,6 +3,65 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
 // ============================================================================
+// 0. PRECIO BASE Y CÓDIGOS DE DESCUENTO
+// ============================================================================
+// Precio base de la membresía en COP. El precio final SIEMPRE se calcula aquí
+// en el backend para evitar que un usuario lo manipule desde el frontend.
+const BASE_PRICE = 1000;
+
+// Precio mínimo que acepta Mercado Pago (en COP). Si un descuento deja el
+// precio por debajo, se redondea al mínimo para que el checkout no falle.
+const MIN_PRICE = 150;
+
+/**
+ * Catálogo de códigos de descuento válidos.
+ *  - type "percent": descuento porcentual (0-100)
+ *  - type "fixed":   descuento de monto fijo en COP
+ * Se puede extender o mover a una variable de entorno / Firestore sin cambiar
+ * la lógica de abajo.
+ */
+const DISCOUNT_CODES = {
+  AMOR10:     { type: 'percent', value: 10,  description: '10% de descuento'  },
+  AMOR25:     { type: 'percent', value: 25,  description: '25% de descuento'  },
+  AMOR50:     { type: 'percent', value: 50,  description: '50% de descuento'  },
+  EARLYLOVE:  { type: 'fixed',   value: 500, description: '$500 COP de descuento' },
+};
+
+/**
+ * Calcula el precio final aplicando un código de descuento.
+ * Devuelve { finalPrice, appliedCode, discount } o un error de validación.
+ */
+function applyDiscount(basePrice, rawCode) {
+  if (!rawCode || typeof rawCode !== 'string') {
+    return { finalPrice: basePrice, appliedCode: null, discount: 0 };
+  }
+
+  const code = rawCode.trim().toUpperCase();
+  const rule = DISCOUNT_CODES[code];
+
+  if (!rule) {
+    return { error: 'Código de descuento inválido' };
+  }
+
+  let discount = 0;
+  if (rule.type === 'percent') {
+    discount = Math.floor((basePrice * rule.value) / 100);
+  } else if (rule.type === 'fixed') {
+    discount = rule.value;
+  }
+
+  let finalPrice = basePrice - discount;
+  if (finalPrice < MIN_PRICE) finalPrice = MIN_PRICE;
+
+  return {
+    finalPrice,
+    appliedCode: code,
+    discount: basePrice - finalPrice,
+    description: rule.description,
+  };
+}
+
+// ============================================================================
 // 1. CONFIGURACIÓN INICIAL Y FIREBASE
 // ============================================================================
 if (!getApps().length) {
@@ -52,9 +111,30 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Datos del formulario corruptos' }; 
   }
 
-  const { storyData } = body;
+  const { storyData, discountCode } = body;
   if (!storyData) {
     return { statusCode: 400, body: 'No recibimos la información de tu historia' };
+  }
+
+  // ============================================================================
+  // 3b. APLICACIÓN DEL CÓDIGO DE DESCUENTO (server-side)
+  // ============================================================================
+  const pricing = applyDiscount(BASE_PRICE, discountCode);
+  if (pricing.error) {
+    console.warn(`⚠️ Código rechazado para uid=${uid}:`, discountCode);
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: pricing.error }),
+    };
+  }
+
+  const finalPrice = pricing.finalPrice;
+  if (pricing.appliedCode) {
+    console.log(
+      `🎟️ Descuento "${pricing.appliedCode}" aplicado: -${pricing.discount} COP ` +
+      `(precio final: ${finalPrice} COP)`
+    );
   }
 
   // Creamos un ID único para esta transacción
@@ -74,8 +154,10 @@ exports.handler = async (event) => {
         items: [
           {
             id: 'carta-premium-001',
-            title: 'Tu Carta de Amor Personalizada',
-            unit_price: 1000,
+            title: pricing.appliedCode
+              ? `Tu Carta de Amor Personalizada (código ${pricing.appliedCode})`
+              : 'Tu Carta de Amor Personalizada',
+            unit_price: finalPrice,
             quantity: 1,
             currency_id: 'COP'
           }
@@ -109,6 +191,13 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         sessionId,
         checkoutUrl: result.init_point, // URL a la que mandaremos al usuario
+        pricing: {
+          basePrice: BASE_PRICE,
+          finalPrice,
+          discount: pricing.discount,
+          appliedCode: pricing.appliedCode,
+          description: pricing.description || null,
+        },
       }),
     };
 
